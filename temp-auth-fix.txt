@@ -1,0 +1,1 @@
+The auth.tsx file has a JSX structural error. The cases within the switch statement need proper JSX return structure.
