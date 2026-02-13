@@ -1,0 +1,27 @@
+{
+  "name": "Offchat - Web3 Crypto Messenger",
+  "short_name": "Offchat",
+  "description": "Secure cryptocurrency-enabled messaging platform with real-time chat and crypto transfers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#00ff41",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["social", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
