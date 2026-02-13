@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en" prefix="og: http://ogp.me/ns#">
+  <head>
+    <!-- Essential Meta Tags -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
+    
+    <!-- Enhanced Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com https://*.replit.com https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' wss: ws: https: wss://*.replit.dev wss://*.kirk.replit.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://*.replit.dev https://*.replit.com https://replit.com; upgrade-insecure-requests" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=()" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Offchat - Web3 Crypto Messaging Platform | Multi-Chain Wallet & Token Swap</title>
+    <meta name="title" content="Offchat - Web3 Crypto Messaging Platform | Multi-Chain Wallet & Token Swap" />
+    <meta name="description" content="Offchat is a Web3 messaging platform with multi-chain wallet integration, DEX token swapping, NFT management, and encrypted crypto communication across Ethereum, BSC, Arbitrum, Polygon, Base and Optimism." />
+    <meta name="keywords" content="Offchat, crypto messaging, web3 chat, ethereum, bsc, arbitrum, polygon, base, optimism, token swap, DEX, NFT, cryptocurrency, blockchain, secure messaging, OFFC token, multi-chain wallet, decentralized messaging" />
+    <meta name="author" content="Offchat" />
+    <meta name="publisher" content="Offchat" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="3 days" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="coverage" content="Worldwide" />
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
+    <link rel="mask-icon" href="/logo.png" color="#00ff00" />
+    <link rel="shortcut icon" href="/logo.png" />
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Offchat" />
+    <meta property="og:title" content="Offchat - Web3 Crypto Messaging Platform" />
+    <meta property="og:description" content="Web3 messaging platform with multi-chain wallet, DEX token swapping, NFT management, and encrypted crypto communication across Ethereum, BSC, Arbitrum, Polygon, Base and Optimism." />
+    <meta property="og:image" content="https://offchat.app/meta.png" />
+    <meta property="og:image:secure_url" content="https://offchat.app/meta.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="675" />
+    <meta property="og:image:alt" content="Offchat - Web3 Crypto Messaging Platform" />
+    <meta property="og:url" content="https://offchat.app" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@OFFCHATApp" />
+    <meta name="twitter:creator" content="@OFFCHATApp" />
+    <meta name="twitter:title" content="Offchat - Web3 Crypto Messaging & Multi-Chain Wallet" />
+    <meta name="twitter:description" content="Web3 messaging with multi-chain wallet, DEX token swap, NFT management across Ethereum, BSC, Arbitrum, Polygon, Base and Optimism." />
+    <meta name="twitter:image" content="https://offchat.app/meta.png" />
+    <meta name="twitter:image:alt" content="Offchat - Web3 Crypto Messaging Platform" />
+    <meta name="twitter:domain" content="offchat.app" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="application-name" content="Offchat" />
+    <meta name="apple-mobile-web-app-title" content="Offchat" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://offchat.app/" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Additional PWA Meta Tags -->
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="msapplication-TileImage" content="/logo.png" />
+    
+    <!-- Performance Optimization: DNS Prefetch and Preconnect -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://storage.googleapis.com" />
+    <link rel="dns-prefetch" href="https://api.coingecko.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Critical Resource Prefetch -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link rel="prefetch" href="/logo.png" />
+    <link rel="prefetch" href="/meta.png" />
+    
+    <!-- Fonts with Performance Optimization -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+    
+    <!-- JSON-LD Structured Data: WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "OFFCHAT",
+      "alternateName": "OFFCHAT App",
+      "applicationCategory": ["SocialNetworkingApplication", "FinanceApplication", "CommunicationApplication"],
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "description": "Offchat is a Web3 messaging platform with multi-chain wallet integration, token swapping, NFT management, and encrypted cryptocurrency communication across Ethereum, BSC, Arbitrum, Polygon, Base and Optimism.",
+      "url": "https://offchat.app",
+      "screenshot": "https://offchat.app/meta.png",
+      "image": "https://offchat.app/meta.png",
+      "logo": "https://offchat.app/logo.png",
+      "author": {
+        "@type": "Organization",
+        "name": "Offchat",
+        "url": "https://offchat.app",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://offchat.app/logo.png"
+        },
+        "sameAs": [
+          "https://x.com/OFFCHAT_app",
+          "https://t.me/OFCCHAT_app"
+        ]
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Offchat",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://offchat.app/logo.png"
+        }
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "featureList": [
+        "End-to-end encrypted messaging",
+        "Embedded HD wallet creation",
+        "Multi-chain support: Ethereum, BSC, Arbitrum, Polygon, Base, Optimism",
+        "Real-time WebSocket messaging",
+        "Integrated DEX token swapping",
+        "Cryptocurrency transfers in chat",
+        "$OFFC token economy",
+        "NFT collection management",
+        "Mobile-responsive interface",
+        "Telegram-style direct messaging",
+        "Crypto market tracking",
+        "Web3 wallet authentication"
+      ],
+      "keywords": "crypto messaging, web3 chat, ethereum, bsc, arbitrum, polygon, base, optimism, cryptocurrency, blockchain, secure messaging, OFFC token, token swap, NFT",
+      "datePublished": "2025-01-09",
+      "dateModified": "2026-02-13",
+      "inLanguage": "en",
+      "isAccessibleForFree": true
+    }
+    </script>
+
+    <!-- JSON-LD Structured Data: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Offchat",
+      "url": "https://offchat.app",
+      "logo": "https://offchat.app/logo.png",
+      "image": "https://offchat.app/meta.png",
+      "description": "Web3 crypto messaging platform with multi-chain wallet integration, token swapping, and encrypted communication.",
+      "sameAs": [
+        "https://x.com/OFFCHAT_app",
+        "https://t.me/OFCCHAT_app"
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "url": "https://offchat.app"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD Structured Data: WebSite (for Google Sitelinks Search) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Offchat",
+      "url": "https://offchat.app",
+      "description": "Web3 crypto messaging platform with multi-chain wallet integration and token swapping",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://offchat.app/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <!-- Professional Loading Screen -->
+    <div id="loading-screen" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; display: flex; align-items: center; justify-content: center; z-index: 9999; font-family: 'JetBrains Mono', monospace; color: #00ff00; overflow: hidden;">
+      <canvas id="matrix-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></canvas>
+      <div style="text-align: center; position: relative; z-index: 1;">
+        <div style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: 0.2em; animation: pulse 2s infinite;">OFFCHAT</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; letter-spacing: 0.1em; margin-bottom: 1rem;">Web3 Crypto Messaging Platform</div>
+        <div style="width: 140px; height: 2px; background: rgba(0, 255, 0, 0.2); border-radius: 1px; overflow: hidden; margin: 0 auto;">
+          <div style="width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #00ff00, transparent); animation: loading 1.5s infinite;"></div>
+        </div>
+      </div>
+      <style>
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes loading { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+      </style>
+      <script>
+        (function() {
+          var c = document.getElementById('matrix-canvas');
+          if (!c) return;
+          var ctx = c.getContext('2d');
+          c.width = window.innerWidth;
+          c.height = window.innerHeight;
+          var chars = 'ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロワヲンヴ日月火水木金土天地人心道力光闇風雷電雨雲海山川空星花夢影命魂龍鬼神';
+          var fs = 14;
+          var cols = Math.floor(c.width / fs);
+          var drops = [];
+          var speeds = [];
+          var brights = [];
+          for (var i = 0; i < cols; i++) {
+            drops[i] = Math.random() * -20;
+            speeds[i] = 0.3 + Math.random() * 0.5;
+            brights[i] = Math.random();
+          }
+          function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.font = fs + 'px monospace';
+            for (var i = 0; i < drops.length; i++) {
+              var ch = chars[Math.floor(Math.random() * chars.length)];
+              var y = drops[i] * fs;
+              if (brights[i] > 0.7) {
+                ctx.shadowColor = '#00ff41';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#aaffaa';
+              } else {
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(0, 255, 65, ' + (0.15 + brights[i] * 0.6) + ')';
+              }
+              ctx.fillText(ch, i * fs, y);
+              ctx.shadowBlur = 0;
+              if (y > c.height && Math.random() > 0.975) {
+                drops[i] = 0;
+                speeds[i] = 0.3 + Math.random() * 0.5;
+                brights[i] = Math.random();
+              }
+              drops[i] += speeds[i];
+            }
+            if (document.getElementById('matrix-canvas')) requestAnimationFrame(draw);
+          }
+          draw();
+          window.addEventListener('resize', function() { c.width = window.innerWidth; c.height = window.innerHeight; });
+        })();
+      </script>
+    </div>
+    
+    <!-- Main Application Container -->
+    <div id="root" aria-label="OFFCHAT Application"></div>
+    
+    <!-- Application Scripts -->
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Performance, Analytics and App Initialization -->
+    <script>
+      const hideLoadingScreen = () => {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.style.opacity = '0';
+          loadingScreen.style.transition = 'opacity 0.2s ease-out';
+          setTimeout(() => {
+            loadingScreen.remove();
+            document.dispatchEvent(new CustomEvent('OFFCHAT:loaded'));
+          }, 200);
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          setTimeout(hideLoadingScreen, 100);
+        });
+      } else {
+        setTimeout(hideLoadingScreen, 100);
+      }
+      
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
+        });
+      }
+    </script>
+    
+    <!-- Development Banner (Replit) -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>
