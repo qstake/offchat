@@ -31,11 +31,6 @@ jobs:
         distribution: 'temurin'
         java-version: '21'
 
-    - name: Verify Java version
-      run: |
-        java -version
-        echo "JAVA_HOME=$JAVA_HOME"
-
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
@@ -64,23 +59,47 @@ jobs:
 
     - name: Fix Java compatibility for Capacitor
       run: |
-        # Force Java 17 source/target compatibility in capacitor-android build
+        VARS="android/variables.gradle"
+        if [ -f "$VARS" ]; then
+          sed -i 's/= 21/= 17/g' "$VARS"
+        fi
         CAP_BUILD="android/capacitor-android/build.gradle"
         if [ -f "$CAP_BUILD" ]; then
           sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$CAP_BUILD"
-          sed -i 's/sourceCompatibility JavaVersion.VERSION_21/sourceCompatibility JavaVersion.VERSION_17/g' "$CAP_BUILD"
-          sed -i 's/targetCompatibility JavaVersion.VERSION_21/targetCompatibility JavaVersion.VERSION_17/g' "$CAP_BUILD"
           sed -i "s/jvmTarget = '21'/jvmTarget = '17'/g" "$CAP_BUILD"
-          sed -i "s/sourceCompatibility = '21'/sourceCompatibility = '17'/g" "$CAP_BUILD"
-          sed -i "s/targetCompatibility = '21'/targetCompatibility = '17'/g" "$CAP_BUILD"
         fi
-        # Also check variables.gradle for javaVersion
-        VARS="android/variables.gradle"
-        if [ -f "$VARS" ]; then
-          cat "$VARS"
-          sed -i 's/= 21/= 17/g' "$VARS"
-          echo "--- Updated variables.gradle ---"
-          cat "$VARS"
+
+    - name: Fix Kotlin duplicate class conflict
+      run: |
+        # Add resolution strategy to app/build.gradle to force consistent Kotlin stdlib version
+        APP_BUILD="android/app/build.gradle"
+        if [ -f "$APP_BUILD" ]; then
+          cat >> "$APP_BUILD" << 'GRADLE'
+
+        configurations.all {
+            resolutionStrategy {
+                force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24'
+                force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
+            }
+        }
+        GRADLE
+        fi
+        # Also add to root build.gradle if it exists
+        ROOT_BUILD="android/build.gradle"
+        if [ -f "$ROOT_BUILD" ]; then
+          cat >> "$ROOT_BUILD" << 'GRADLE'
+
+        subprojects {
+            configurations.all {
+                resolutionStrategy {
+                    force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
+                    force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24'
+                    force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24'
+                }
+            }
+        }
+        GRADLE
         fi
 
     - name: Add Bluetooth permissions to AndroidManifest
