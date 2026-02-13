@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /roadmap
+Allow: /whitepaper
+Allow: /crypto-market
+Allow: /nft-collection
+Allow: /offc-transfers
+Allow: /swap
+Allow: /terms
+Allow: /privacy
+
+Disallow: /chat/
+Disallow: /chat-conversations
+Disallow: /profile/
+Disallow: /api/
+
+Sitemap: https://offchat.app/sitemap.xml
+Host: https://offchat.app
