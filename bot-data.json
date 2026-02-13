@@ -1,0 +1,197 @@
+
+{
+  "scheduledMessages": [
+    {
+      "id": 1,
+      "message": "🌐 **OffchatApp Revolution Starting!**\n\nWorld's first truly decentralized communication platform! 📡 Offline messaging, 🔐 military-grade encryption, ⛓️ multi-blockchain support for the ultimate digital freedom experience!\n\n✨ **Join the Matrix:** http://offchatapp.com",
+      "interval": 1800000,
+      "active": true,
+      "media": "offchat-hero.mp4"
+    },
+    {
+      "id": 2,
+      "message": "📡 **Offline Messaging Revolution!**\n\nOffchatApp's P2P mesh network lets you message even without internet! 🌍 WiFi Direct, Bluetooth LE local networking, 💾 offline message synchronization.\n\n🚀 **True Freedom:** Communicate without any server dependency!\n\n📱 **Community:** http://t.me/offchatapp",
+      "interval": 2100000,
+      "active": true,
+      "media": "offline-messaging.gif"
+    },
+    {
+      "id": 3,
+      "message": "⛓️ **Blockchain Chat Revolution!**\n\nYour messages are verified on blockchain, 🔐 zero-knowledge proofs protect your privacy! Secure communication on Ethereum, BSC, Polygon.\n\n💎 **Web3 Future:** Chat securely without central authorities!\n\n📊 **Track Progress:** http://offchat.online",
+      "interval": 2700000,
+      "active": true,
+      "media": "blockchain-chat.mp4"
+    },
+    {
+      "id": 4,
+      "message": "🔐 **Military-Grade Security!**\n\nSignal Protocol + double ratchet algorithm keeps your messages completely private. 🛡️ Post-quantum cryptography for future security!\n\n✅ **Audited:** Trail of Bits and CertiK security approval completed!",
+      "interval": 3300000,
+      "active": true,
+      "media": "security-audit.gif"
+    },
+    {
+      "id": 5,
+      "message": "⚡ **Lightning Speed Performance!**\n\nGlobal sub-50ms message latency, 🚀 1M+ concurrent user support, 99.99% uptime guarantee!\n\n🌍 **Global Network:** Most advanced Web3 communication infrastructure now active!",
+      "interval": 3900000,
+      "active": true,
+      "media": "performance-stats.gif"
+    },
+    {
+      "id": 6,
+      "message": "📱 **Mobile Apps Coming!**\n\niOS and Android apps launching Q2 2026! 🍎 Native iOS integration, 🤖 Android optimization, 🔒 biometric security.\n\n🎯 **Preview:** The future of mobile Web3 communication!",
+      "interval": 4500000,
+      "active": true,
+      "media": "mobile-preview.mp4"
+    },
+    {
+      "id": 7,
+      "message": "🌟 **Matrix Protocol Active!**\n\nOffchatApp's revolutionary architecture: 📡 hybrid consensus, 🔐 cryptographic message sharding, 🛡️ privacy-preserving validation system!\n\n📖 **Technical Docs:** http://offchatapp.com",
+      "interval": 5100000,
+      "active": true,
+      "media": "matrix-protocol.png"
+    },
+    {
+      "id": 8,
+      "message": "🎯 **2026 Roadmap Update!**\n\nPhase 2 continues: 📱 Mobile apps, 🌐 offline messaging, ⛓️ full decentralization approaching!\n\n🚀 **Progress:** http://offchatapp.com\n💰 **Staking:** http://offchatstake.com",
+      "interval": 5700000,
+      "active": true,
+      "media": "roadmap-progress.png"
+    },
+    {
+      "id": 9,
+      "message": "🏛️ **Decentralized Governance!**\n\nOffchatApp community makes protocol decisions! 🗳️ Feature prioritization, ⚖️ fee structures, 🤝 partnership approvals through voting.\n\n💎 **Shape the Future:** Have your voice, make decisions!",
+      "interval": 6300000,
+      "active": true,
+      "media": "governance-voting.gif"
+    },
+    {
+      "id": 10,
+      "message": "🌍 **Global Community Growing!**\n\n50,000+ users, 120+ countries, active governance participation! 🌐 Regional ambassadors, 💻 developer contributions building the decentralized future together!\n\n🤝 **Join:** http://t.me/offchatapp",
+      "interval": 6900000,
+      "active": true,
+      "media": "global-community.gif"
+    },
+    {
+      "id": 11,
+      "message": "📡 **P2P Mesh Network Live!**\n\nRevolutionary offline communication! Create local networks with WiFi Direct and Bluetooth LE. 🌐 Message without internet, 💾 automatic sync when connection returns.\n\n🚀 **True Independence:** No servers, no censorship, pure P2P!\n\n📰 **Updates:** https://medium.com/@OffchatApp",
+      "interval": 7500000,
+      "active": true,
+      "media": "mesh-network.gif"
+    },
+    {
+      "id": 12,
+      "message": "🚨 **Security Alert!**\n\nOffchatApp admins NEVER DM you or ask for private keys! ✅ Official links only: http://offchatapp.com, http://offchatstake.com, http://t.me/offchatapp\n\n⚠️ **Report suspicious activities!**",
+      "interval": 8100000,
+      "active": true,
+      "media": "security-warning.png"
+    },
+    {
+      "id": 13,
+      "message": "⛓️ **Blockchain-Verified Messages!**\n\nEvery message cryptographically verified on-chain! 🔐 Zero-knowledge proofs ensure privacy while maintaining integrity. Multi-chain support across Ethereum, BSC, Polygon.\n\n🌟 **Web3 Native:** First true blockchain communication protocol!\n\n📊 **Supply:** http://offchat.online",
+      "interval": 8700000,
+      "active": true,
+      "media": "blockchain-verification.mp4"
+    },
+    {
+      "id": 14,
+      "message": "🔮 **Post-Quantum Ready!**\n\nOffchatApp prepared for quantum computing era: CRYSTALS-Dilithium signatures and Kyber key encapsulation. 🛡️ Decades of security guarantee!\n\n⚡ **Future Proof:** Your privacy protected forever!",
+      "interval": 9300000,
+      "active": true,
+      "media": "quantum-ready.gif"
+    },
+    {
+      "id": 15,
+      "message": "🌐 **Offline-First Design!**\n\nMessage anytime, anywhere! 📱 Local device storage, 🔄 conflict-free data synchronization, 📡 mesh network auto-discovery when peers nearby.\n\n💪 **Unstoppable Communication:** Internet outages can't stop OffchatApp!\n\n📈 **Charts:** https://coingecko.com/en/coins/offchat",
+      "interval": 9900000,
+      "active": true,
+      "media": "offline-first.gif"
+    },
+    {
+      "id": 16,
+      "message": "🌟 **Zero-Knowledge Innovation!**\n\nOffchatApp pioneering zk-SNARK implementation for messaging platforms! 🔐 Transaction privacy without breaking verification.\n\n⚡ **Revolutionary Cryptographic Advancement in Web3!**",
+      "interval": 10500000,
+      "active": true,
+      "media": "zk-innovation.gif"
+    },
+    {
+      "id": 17,
+      "message": "🔄 **Multi-Chain Interoperability!**\n\nSeamless messaging across Ethereum, BSC, Polygon networks! ⛓️ Cross-chain message routing, 🔐 unified encryption, 💰 optimal gas fee management.\n\n🌐 **Breaking Blockchain Silos:** True cross-chain communication!\n\n💎 **Stake:** http://offchatstake.com",
+      "interval": 11100000,
+      "active": true,
+      "media": "multi-chain.png"
+    },
+    {
+      "id": 18,
+      "message": "📡 **Mesh Network Expansion!**\n\nEvery OffchatApp device becomes a network node! 🌐 Self-healing topology, 📶 automatic peer discovery, 🔄 message routing optimization.\n\n🚀 **Building the Decentralized Internet:** One device at a time!",
+      "interval": 11700000,
+      "active": true,
+      "media": "mesh-expansion.gif"
+    },
+    {
+      "id": 19,
+      "message": "🤝 **Partnership Ecosystem!**\n\nOffchatApp collaborating with leading security firms, blockchain networks, and hardware wallet providers.\n\n🌐 **Building the most comprehensive Web3 communication infrastructure together!**",
+      "interval": 12300000,
+      "active": true,
+      "media": "partnerships.gif"
+    },
+    {
+      "id": 20,
+      "message": "🔐 **End-to-End Encryption Evolution!**\n\nSignal Protocol implementation with blockchain verification! 🛡️ Forward secrecy, 🔄 message integrity, ⚡ real-time key rotation.\n\n📚 **Learn More:** https://medium.com/@OffchatApp\n🌍 **Website:** http://offchatapp.com",
+      "interval": 12900000,
+      "active": true,
+      "media": "encryption-evolution.png"
+    }
+  ],
+  "triggers": [
+    {
+      "word": "what is offchat",
+      "response": "🌐 **What is OffchatApp?**\n\nWorld's first comprehensive decentralized communication ecosystem:\n\n🔐 **Military-Grade Security:** Signal Protocol + Zero-Knowledge Privacy\n📡 **Offline Messaging:** P2P mesh network for internet-free communication\n⛓️ **Multi-Blockchain:** ETH, BSC, Polygon, Arbitrum support\n🏛️ **Decentralized Governance:** Community decisions\n⚡ **Sub-50ms Latency:** 99.99% uptime\n\n🌟 **True digital freedom:** http://offchatapp.com",
+      "media": "offchat-overview.mp4"
+    },
+    {
+      "word": "roadmap",
+      "response": "🛣️ **OffchatApp Development Roadmap:**\n\n**✅ PHASE 0 (Q4 2025): MATRIX FOUNDATIONS** - COMPLETED\n• Web-based Matrix interface\n• WebSocket real-time communication\n• MetaMask integration\n• PostgreSQL database\n\n**🔄 PHASE 1 (Q1 2026): PLATFORM EXPANSION** - IN PROGRESS\n• Multi-blockchain SDK\n• DeFi protocol APIs\n• IPFS NFT storage\n• libp2p network stack\n• React Native setup\n\n**📱 PHASE 2 (Q2 2026): MOBILE MATRIX**\n• iOS and Android apps\n• Offline messaging system\n• Native wallet integration\n\n**⛓️ PHASE 3 (Q3 2026): MATRIX PROTOCOL**\n• Full decentralization\n• Blockchain integration\n• Smart contracts\n\n**🚀 PHASE 4 (Q4 2026): MASS ADOPTION**\n• Global expansion\n• Enterprise solutions\n• 100K+ user target\n\n📊 **Detailed roadmap:** http://offchatapp.com",
+      "media": "roadmap-timeline.png"
+    },
+    {
+      "word": "mobile app",
+      "response": "📱 **OffchatApp Mobile Applications**\n\n**Coming Q2 2026:**\n🍎 **iOS App Store** (iPhone, iPad)\n🤖 **Google Play Store** (Android)\n\n**Core Features:**\n• End-to-end encrypted messaging\n• Voice and video calls\n• Multi-blockchain wallet integration\n• Hardware wallet connectivity\n• Biometric authentication\n• Offline messaging and sync\n• File sharing up to 2GB\n• Group chats (10,000+ members)\n\n**Advanced Capabilities:**\n• dApp browser integration\n• NFT gallery and marketplace\n• DeFi protocol interfaces\n• Cross-blockchain bridge transactions\n• Smart contract interactions\n\n**Performance:**\n• Battery efficiency algorithms\n• Background sync optimization\n• Mesh network support\n• Emergency communication protocols\n\n**Security:**\n• Secure enclave key storage\n• Anti-tampering detection\n• Remote wipe capabilities\n• Screenshot/recording prevention\n\nBeta testing soon! Join our community for early access: http://t.me/offchatapp",
+      "media": "mobile-features.mp4"
+    },
+    {
+      "word": "security",
+      "response": "🛡️ **OffchatApp Security Architecture:**\n\n**Encryption Standards:**\n• Signal Protocol with Double Ratchet\n• AES-256-GCM message encryption\n• Zero-knowledge proofs (zk-SNARKs)\n• Post-quantum cryptography ready\n\n**Key Management:**\n• Hardware wallet integration\n• Secure enclave usage\n• Biometric authentication\n• Multi-signature support\n\n**Network Security:**\n• Tor-integrated P2P mesh\n• Active DDoS protection\n• Byzantine fault tolerance\n• Node reputation scoring\n\n**Completed Audits:**\n✅ Trail of Bits security audit\n✅ CertiK comprehensive review\n✅ Quantstamp smart contract verification\n✅ Active bug bounty program ($50K rewards)\n\n**Advanced Security:**\n• Metadata hiding techniques\n• Traffic analysis resistance\n• Location privacy\n• Ephemeral messages\n\n*\"Privacy is not about hiding something. It's about protecting everything.\"*\n\n🌍 **Learn more:** http://offchatapp.com",
+      "media": "security-features.gif"
+    },
+    {
+      "word": "privacy",
+      "response": "🔐 **OffchatApp Privacy Architecture:**\n\n**Zero-Knowledge Principles:**\n• Message content never exposed to network\n• Transaction amounts remain private\n• Participant identities protected\n• Metadata hiding techniques\n• Off-chain computation verification\n\n**Signal Protocol Implementation:**\n• Double Ratchet for forward secrecy\n• X3DH key agreement protocol\n• Perfect forward secrecy guarantee\n• End-to-end encryption standard\n• Military-grade AES-256-GCM\n\n**Advanced Privacy Features:**\n🎭 **Anonymous Messaging:** No phone number required\n🌐 **Tor Integration:** IP address hiding\n⚡ **Ephemeral Messages:** Auto-delete timers\n🔄 **Message Mixing:** Traffic analysis resistance\n📍 **Location Privacy:** Geographic obfuscation\n\n**Post-Quantum Security:**\n• CRYSTALS-Dilithium signatures\n• Kyber key encapsulation\n• Hybrid classical-quantum schemes\n• Future-proof cryptography\n\n**Privacy by Design:**\n• Local data encryption\n• No central data collection\n• Open source cryptography\n• Regular security audits\n• Community-driven development\n\n*\"True privacy means you control your data, not the platform.\"*\n\n📰 **Read more:** https://medium.com/@OffchatApp",
+      "media": "privacy-architecture.mp4"
+    },
+    {
+      "word": "whitepaper",
+      "response": "📖 **OffchatApp Technical Whitepaper**\n\n**Comprehensive 15-page technical specification:**\n\n🏗️ **Protocol Architecture:** Layered system design\n🔐 **Cryptographic Foundations:** Signal Protocol + zk-SNARKs\n⛓️ **Blockchain Integration:** Multi-blockchain smart contracts\n📡 **P2P Network Design:** Mesh network implementation\n🛡️ **Security Analysis:** Threat modeling and mitigation\n⚡ **Performance Specifications:** Global sub-50ms latency\n🛣️ **Implementation Roadmap:** Development timeline\n\n**Key Innovations:**\n• Hybrid consensus for message ordering\n• Cryptographic message sharding\n• Privacy-preserving transaction verification\n• Post-quantum cryptography readiness\n\n**Technical Depth:**\n• P2P mesh network protocols\n• Zero-knowledge proof mathematical foundations\n• Multi-blockchain interoperability\n• Offline messaging algorithms\n• Decentralized identity management\n\n**Academic References:**\n• Signal Protocol specifications\n• zk-SNARK research papers\n• Blockchain consensus algorithms\n• P2P network topology optimizations\n\nRead full whitepaper: http://offchatapp.com",
+      "media": "whitepaper-tech.png"
+    },
+    {
+      "word": "community",
+      "response": "🤝 **Join OffchatApp Community:**\n\n**50,000+ Worldwide Members:**\n🌍 120+ country representatives\n📱 Daily 500+ Telegram users\n🏛️ 30+ governance participants\n💻 10+ developer contributors\n\n**Official Channels:**\n📱 **Telegram:** http://t.me/offchatapp\n🌐 **Website:** http://offchatapp.com\n📰 **Medium:** https://medium.com/@OffchatApp\n📊 **CoinGecko:** https://coingecko.com/en/coins/offchat\n💰 **Staking:** http://offchatstake.com\n📈 **Supply:** http://offchat.online\n\n**Community Programs:**\n🏆 **Ambassador Program:** Monthly $500-2000\n🐛 **Bug Bounty:** Up to $50,000 rewards\n💰 **Developer Grants:** $5,000-50,000\n🎯 **Governance Voting:** Shape the future\n🎉 **Weekly AMA:** Thursday 22:00 UTC+3\n\n**How to Get Involved:**\n1. Join our Telegram: http://t.me/offchatapp\n2. Follow development updates\n3. Participate in governance voting\n4. Contribute code and ideas\n5. Share OffchatApp with friends\n\n**Community Events:**\n• Weekly developer meetups\n• Monthly community AMAs\n• Quarterly roadmap updates\n• Hackathons and developer competitions\n• Educational workshops\n\n*\"We're not just building software, we're building a movement toward digital freedom.\"*",
+      "media": "community-stats.gif"
+    },
+    {
+      "word": "offline messaging",
+      "response": "📡 **OffchatApp Offline Messaging**\n\n**Revolutionary P2P Mesh Network:**\nCommunicate even without internet! 🌐 WiFi Direct, 📶 Bluetooth LE mesh networking for completely independent messaging.\n\n**Technical Features:**\n🔄 **CRDT (Conflict-free Replicated Data Types)** - Offline synchronization\n📱 **WiFi Direct P2P** - Direct device connection\n🌐 **Bluetooth LE Mesh** - Multi-hop message transmission\n💾 **Local Message Queue** - Auto-sync when connection returns\n⏰ **Vector Clocks** - Distributed timestamp ordering\n\n**Use Cases:**\n🏔️ **Remote Areas:** Mountains, forests, desert communication\n🚨 **Emergencies:** Vital communication during natural disasters\n✈️ **Air Travel:** Messaging in airplane mode\n🏢 **Corporate Security:** Internal network-independent communication\n🎪 **Events:** Festival, concert area mesh networks\n\n**Security Features:**\n• AES-256 local encryption\n• Peer authentication\n• End-to-end encryption in offline mode\n• Message integrity verification\n• Replay attack protection\n\n**Phase 2 (Q2 2026) Goals:**\n📱 iOS and Android native implementation\n🔗 Mesh network auto-discovery\n⚡ 10-hop message transmission\n📊 Network performance optimization\n\n🚀 **True Freedom:** Communicate securely without dependency on any server, operator, or internet provider!\n\n*\"When the internet goes down, OffchatApp never disconnects.\"*\n\n📱 **Join:** http://t.me/offchatapp\n🌍 **Website:** http://offchatapp.com",
+      "media": "offline-messaging-demo.mp4"
+    },
+    {
+      "word": "blockchain chat",
+      "response": "⛓️ **OffchatApp Blockchain Chat Revolution**\n\n**Your Messages Verified on Blockchain:**\n🔐 **Merkle Tree Verification** - Every message secured with cryptographic proofs\n🌐 **Multi-Blockchain** - Works on Ethereum, BSC, Polygon\n📝 **W3C DID Standard** - Decentralized identity verification\n🗳️ **DAO Governance** - Quadratic voting mechanisms\n\n**Technical Innovations:**\n💎 **Zero-Knowledge Proofs (zk-SNARKs)** - Verification while preserving privacy\n🔗 **Smart Contract Integration** - Automated message validation\n📡 **IPFS Content Addressing** - Distributed file storage\n⚡ **Hybrid Consensus** - Custom algorithm for message ordering\n\n**User Experience:**\n• Traditional messaging speed\n• Blockchain verification transparency\n• Optimized gas fees\n• Multi-wallet support\n• Automatic backup and recovery\n\n**Security Guarantees:**\n🛡️ **Immutable Message History** - No one can alter messages\n🔒 **Cryptographic Signatures** - Message ownership proven\n⚖️ **Slashing Mechanism** - Automatic penalties for bad actors\n🌐 **Decentralized Moderation** - Community-based governance\n\n**Phase 3 Goals (Q3 2026):**\n• Solidity smart contracts\n• OpenZeppelin security standards\n• ENS integration\n• Filecoin storage incentives\n• Cross-chain message bridges\n\n**True Web3 Communication:**\n• No dependency on central servers\n• Censorship resistance\n• Global access guarantee\n• Transparent and auditable\n• Community controlled\n\n🚀 **The Future is Here:** Experience real-time messaging with blockchain technology for the first time!\n\n*\"Your messages now belong not just to you, but to the entire blockchain.\"*\n\n📊 **Track:** http://offchat.online\n💰 **Stake:** http://offchatstake.com\n📰 **Learn:** https://medium.com/@OffchatApp",
+      "media": "blockchain-chat-revolution.gif"
+    },
+    {
+      "word": "ca",
+      "response": "🔗 **OffchatApp Contract Addresses**\n\n**Main Token Contract:**\n`0xAf62c16e46238c14AB8eda78285feb724e7d4444`\n\n**Multi-Blockchain Deployment:**\n⚠️ **Ethereum Mainnet:** Coming Soon\n⚠️ **Binance Smart Chain:** Coming Soon  \n⚠️ **Polygon Network:** Coming Soon\n⚠️ **Arbitrum One:** Coming Soon\n\n**Verification:**\n✅ Always verify through our official channels!\n📱 **Telegram:** http://t.me/offchatapp\n🌐 **Website:** http://offchatapp.com\n\n**Security Warning:**\n🚨 Beware of fake tokens!\n🔍 Always check contract address\n💰 Only trade on verified exchanges\n\n**Official Listings:**\n📊 **CoinGecko:** https://coingecko.com/en/coins/offchat\n📈 **Supply API:** http://offchat.online\n\nFollow our official channels for more information!",
+      "media": "contract-address.png"
+    }
+  ]
+}
