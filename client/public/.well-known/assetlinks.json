@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.offchat.cryptomessenger",
+    "sha256_cert_fingerprints": ["SHA256_WILL_BE_PROVIDED_BY_PWA2APK"]
+  }
+}]
