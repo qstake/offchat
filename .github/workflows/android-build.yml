@@ -29,7 +29,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '21'
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
@@ -67,8 +67,6 @@ jobs:
         <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
         <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
-        <uses-permission android:name="android.permission.INTERNET" />\
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
         <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />' \
         android/app/src/main/AndroidManifest.xml
 
