@@ -1,13 +1,20 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-const isCapacitor = typeof window !== 'undefined' &&
-  (window.location.protocol === 'capacitor:' ||
-   window.location.protocol === 'ionic:' ||
-   !!(window as any).Capacitor ||
-   (window.location.hostname === 'localhost' && typeof (window as any).AndroidBridge !== 'undefined'));
+function detectCapacitor(): boolean {
+  if (typeof window === 'undefined') return false;
+  if ((window as any).Capacitor) return true;
+  if (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') return true;
+  if (window.location.hostname === 'localhost' && window.location.protocol === 'https:' && !window.location.port) return true;
+  return false;
+}
 
+const isCapacitor = detectCapacitor();
 const API_BASE = isCapacitor ? 'https://offchat.app' : '';
 const WS_BASE = isCapacitor ? 'wss://offchat.app' : '';
+
+if (isCapacitor) {
+  console.log('[Offchat] Running in Capacitor mode, API base:', API_BASE);
+}
 
 export function getApiUrl(path: string): string {
   if (path.startsWith('/api')) {
@@ -24,16 +31,15 @@ export function getWebSocketUrl(): string {
   return `${currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'}//${currentUrl.host}/ws`;
 }
 
-const originalFetch = window.fetch.bind(window);
-window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  if (typeof input === 'string' && input.startsWith('/api')) {
-    return originalFetch(getApiUrl(input), init);
-  }
-  if (input instanceof Request && input.url.startsWith('/api')) {
-    return originalFetch(getApiUrl(input.url), { ...init, method: input.method, headers: input.headers, body: input.body });
-  }
-  return originalFetch(input, init);
-} as typeof fetch;
+if (isCapacitor && typeof window !== 'undefined' && window.fetch) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    if (typeof input === 'string' && input.startsWith('/api')) {
+      return originalFetch(API_BASE + input, init);
+    }
+    return originalFetch(input, init);
+  } as typeof fetch;
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -47,7 +53,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  const res = await fetch(getApiUrl(url), {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -64,7 +70,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    const res = await fetch(getApiUrl(url), {
       credentials: "include",
     });
 
