@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getWebSocketUrl } from "@/lib/queryClient";
 
 interface WebSocketMessage {
   type: string;
@@ -15,10 +16,8 @@ export function useFriendWebSocket(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
 
-    // Simple WebSocket URL for Replit
-    const currentUrl = new URL(window.location.href);
-    const wsUrl = `${currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'}//${currentUrl.host}/ws`;
-    console.log('👥 Friend WebSocket connecting to:', wsUrl, { location: window.location.href });
+    const wsUrl = getWebSocketUrl();
+    console.log('👥 Friend WebSocket connecting to:', wsUrl);
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {
