@@ -163,6 +163,14 @@ jobs:
         echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
         echo "Certificate and provisioning profile installed (UUID: $PP_UUID, Name: $PP_NAME)"
 
+    - name: Configure signing for App target only
+      run: |
+        PROJECT="ios/App/App.xcodeproj/project.pbxproj"
+        if [ -f "$PROJECT" ]; then
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PROJECT"
+          echo "Code signing set to Manual in project"
+        fi
+
     - name: Build iOS archive
       run: |
         xcodebuild -workspace ios/App/App.xcworkspace \
@@ -172,10 +180,12 @@ jobs:
           -archivePath $RUNNER_TEMP/Offchat.xcarchive \
           archive \
           CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} \
+          DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
           CODE_SIGN_IDENTITY="Apple Distribution" \
-          PROVISIONING_PROFILE="$PP_UUID" \
-          -allowProvisioningUpdates
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          -allowProvisioningUpdates \
+          -destination "generic/platform=iOS" \
+          ONLY_ACTIVE_ARCH=NO
 
     - name: Export IPA
       run: |
@@ -191,7 +201,7 @@ jobs:
           <key>provisioningProfiles</key>
           <dict>
             <key>app.offchat.messenger</key>
-            <string>$PP_UUID</string>
+            <string>$PP_NAME</string>
           </dict>
           <key>signingStyle</key>
           <string>manual</string>
