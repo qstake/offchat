@@ -5,7 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useWallet } from "@/hooks/use-wallet";
+import { useWallet, WalletProvider } from "@/hooks/use-wallet";
 import { OfflineModeProvider } from "@/hooks/use-offline-mode";
 import { ThemeProvider } from "@/contexts/theme-context";
 import AuthPage from "@/pages/auth";
@@ -193,12 +193,14 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <OfflineModeProvider>
-            <div className="dark">
-              <Toaster />
-              <Router />
-            </div>
-          </OfflineModeProvider>
+          <WalletProvider>
+            <OfflineModeProvider>
+              <div className="dark">
+                <Toaster />
+                <Router />
+              </div>
+            </OfflineModeProvider>
+          </WalletProvider>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
