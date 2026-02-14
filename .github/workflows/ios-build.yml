@@ -167,8 +167,20 @@ jobs:
       run: |
         PROJECT="ios/App/App.xcodeproj/project.pbxproj"
         if [ -f "$PROJECT" ]; then
+          # Set Manual signing for App target
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PROJECT"
-          echo "Code signing set to Manual in project"
+          # Inject provisioning profile and team into all build configurations
+          sed -i '' "s/DEVELOPMENT_TEAM = \"\";/DEVELOPMENT_TEAM = \"${{ secrets.IOS_TEAM_ID }}\";/g" "$PROJECT"
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" "$PROJECT"
+          sed -i '' "s/CODE_SIGN_IDENTITY = \"\";/CODE_SIGN_IDENTITY = \"Apple Distribution\";/g" "$PROJECT"
+          echo "Signing configured: Team=${{ secrets.IOS_TEAM_ID }}, Profile=$PP_NAME"
+        fi
+        # Ensure Pods targets use automatic signing (no provisioning profile)
+        PODS_PROJECT="ios/App/Pods/Pods.xcodeproj/project.pbxproj"
+        if [ -f "$PODS_PROJECT" ]; then
+          sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' "$PODS_PROJECT"
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*";/PROVISIONING_PROFILE_SPECIFIER = "";/g' "$PODS_PROJECT"
+          echo "Pods targets set to Automatic signing"
         fi
 
     - name: Build iOS archive
@@ -179,12 +191,8 @@ jobs:
           -configuration Release \
           -archivePath $RUNNER_TEMP/Offchat.xcarchive \
           archive \
-          CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
-          CODE_SIGN_IDENTITY="Apple Distribution" \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          -allowProvisioningUpdates \
           -destination "generic/platform=iOS" \
+          -allowProvisioningUpdates \
           ONLY_ACTIVE_ARCH=NO
 
     - name: Export IPA
