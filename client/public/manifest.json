@@ -12,13 +12,13 @@
   "categories": ["social", "finance", "productivity"],
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/applogo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/applogo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
