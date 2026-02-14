@@ -29,8 +29,7 @@ jobs:
     - name: Create Capacitor config
       run: |
         rm -f capacitor.config.ts capacitor.config.json
-        cat > capacitor.config.json << 'EOF'
-        {
+        echo '{
           "appId": "app.offchat.messenger",
           "appName": "Offchat",
           "webDir": "dist/public",
@@ -39,13 +38,8 @@ jobs:
             "allowNavigation": ["offchat.app", "*.offchat.app", "offchat.replit.app"]
           },
           "plugins": {
-            "CapacitorHttp": {
-              "enabled": true
-            },
-            "StatusBar": {
-              "style": "DARK",
-              "overlaysWebView": true
-            },
+            "CapacitorHttp": { "enabled": true },
+            "StatusBar": { "style": "DARK", "overlaysWebView": true },
             "BluetoothLe": {
               "displayStrings": {
                 "scanning": "Searching for Offchat users...",
@@ -55,8 +49,7 @@ jobs:
               }
             }
           }
-        }
-        EOF
+        }' > capacitor.config.json
 
     - name: Add iOS platform
       run: npx cap add ios 2>&1 || true
@@ -97,40 +90,18 @@ jobs:
         /usr/libexec/PlistBuddy -c "Add :NSBluetoothPeripheralUsageDescription string 'Offchat uses Bluetooth to communicate with nearby devices'" "$PLIST" 2>/dev/null || true
         /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 'Offchat uses local network to discover nearby users'" "$PLIST" 2>/dev/null || true
 
-    - name: Set app icon (remove alpha channel for App Store)
+    - name: Set app icon without alpha channel
       run: |
         LOGO="client/public/applogo.png"
         if [ -f "$LOGO" ]; then
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           if [ -d "$ICONSET" ]; then
             FIXED_LOGO="$RUNNER_TEMP/applogo_no_alpha.png"
-            # Use Python to properly remove alpha channel by compositing onto black background
-            python3 << 'PYEOF'
-import struct, zlib, os, sys
-
-input_path = os.environ.get('LOGO', 'client/public/applogo.png')
-output_path = os.environ.get('RUNNER_TEMP', '/tmp') + '/applogo_no_alpha.png'
-
-with open(input_path, 'rb') as f:
-    data = f.read()
-
-# Parse PNG
-assert data[:8] == b'\x89PNG\r\n\x1a\n', "Not a valid PNG"
-
-# Use macOS CoreGraphics via objc bridge to remove alpha
-import subprocess
-# Convert PNG to JPEG (no alpha) then back to PNG
-jpeg_path = output_path.replace('.png', '.jpg')
-subprocess.run(['sips', '-s', 'format', 'jpeg', input_path, '--out', jpeg_path], check=True, capture_output=True)
-subprocess.run(['sips', '-s', 'format', 'png', jpeg_path, '--out', output_path], check=True, capture_output=True)
-os.remove(jpeg_path)
-
-# Verify
-result = subprocess.run(['sips', '-g', 'hasAlpha', output_path], capture_output=True, text=True)
-print(f"Output file alpha check: {result.stdout.strip()}")
-print(f"Successfully created icon without alpha at {output_path}")
-PYEOF
-            echo "Alpha channel status:"
+            JPEG_TEMP="$RUNNER_TEMP/applogo_temp.jpg"
+            sips -s format jpeg "$LOGO" --out "$JPEG_TEMP"
+            sips -s format png "$JPEG_TEMP" --out "$FIXED_LOGO"
+            rm -f "$JPEG_TEMP"
+            echo "Alpha check after conversion:"
             sips -g hasAlpha "$FIXED_LOGO"
             for SIZE in AppIcon-20x20@1x AppIcon-20x20@2x AppIcon-20x20@3x AppIcon-29x29@1x AppIcon-29x29@2x AppIcon-29x29@3x AppIcon-40x40@1x AppIcon-40x40@2x AppIcon-40x40@3x AppIcon-60x60@2x AppIcon-60x60@3x AppIcon-76x76@1x AppIcon-76x76@2x AppIcon-83.5x83.5@2x; do
               cp "$FIXED_LOGO" "$ICONSET/${SIZE}.png"
@@ -200,7 +171,7 @@ PYEOF
 
     - name: Export IPA for App Store
       run: |
-        cat > "$RUNNER_TEMP/ExportOptions.plist" << EOF
+        cat > "$RUNNER_TEMP/ExportOptions.plist" <<EXPORTEOF
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
@@ -228,7 +199,7 @@ PYEOF
           <string>upload</string>
         </dict>
         </plist>
-        EOF
+        EXPORTEOF
         echo "ExportOptions.plist contents:"
         cat "$RUNNER_TEMP/ExportOptions.plist"
         xcodebuild -exportArchive \
@@ -241,10 +212,6 @@ PYEOF
           -authenticationKeyIssuerID "${{ secrets.APP_STORE_API_ISSUER_ID }}"
 
     - name: Upload to App Store Connect
-      env:
-        APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_API_KEY_ID }}
-        APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_API_ISSUER_ID }}
-        APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_API_KEY_P8_BASE64 }}
       run: |
         IPA_PATH=$(find "$RUNNER_TEMP/export" -name "*.ipa" | head -1)
         if [ -z "$IPA_PATH" ]; then
@@ -252,20 +219,12 @@ PYEOF
           exit 1
         fi
         echo "Uploading IPA: $IPA_PATH"
-
-        API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
-        echo -n "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$API_KEY_PATH"
-
-        xcrun notarytool store-credentials "AppStoreConnect" \
-          --key "$API_KEY_PATH" \
-          --key-id "$APP_STORE_CONNECT_API_KEY_ID" \
-          --issuer "$APP_STORE_CONNECT_ISSUER_ID" 2>/dev/null || true
-
+        API_KEY_PATH="$HOME/private_keys/AuthKey_${{ secrets.APP_STORE_API_KEY_ID }}.p8"
         xcrun altool --upload-app \
           --type ios \
           --file "$IPA_PATH" \
-          --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-          --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" \
+          --apiKey "${{ secrets.APP_STORE_API_KEY_ID }}" \
+          --apiIssuer "${{ secrets.APP_STORE_API_ISSUER_ID }}" \
           --show-progress
 
     - name: Upload IPA as artifact (backup)
@@ -280,4 +239,4 @@ PYEOF
       run: |
         security default-keychain -s login.keychain-db 2>/dev/null || true
         security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
-        rm -f "$RUNNER_TEMP/AuthKey.p8" 2>/dev/null || true
+        rm -rf "$HOME/private_keys" 2>/dev/null || true
