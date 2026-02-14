@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothGattServer;
 import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothProfile;
@@ -24,6 +25,9 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @CapacitorPlugin(name = "BleAdvertiser")
@@ -33,6 +37,7 @@ public class BleAdvertiserPlugin extends Plugin {
     private static final UUID SERVICE_UUID = UUID.fromString("19b10000-e8f2-537e-4f6c-d104768a1214");
     private static final UUID MESSAGE_CHAR_UUID = UUID.fromString("19b10001-e8f2-537e-4f6c-d104768a1214");
     private static final UUID DISCOVERY_CHAR_UUID = UUID.fromString("19b10002-e8f2-537e-4f6c-d104768a1214");
+    private static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
@@ -43,6 +48,10 @@ public class BleAdvertiserPlugin extends Plugin {
     private String currentUsername = "";
     
     private AdvertiseCallback advertiseCallback;
+    
+    private final Set<BluetoothDevice> subscribedDevicesMessage = new HashSet<>();
+    private final Set<BluetoothDevice> subscribedDevicesDiscovery = new HashSet<>();
+    private final Set<BluetoothDevice> connectedDevices = new HashSet<>();
 
     @Override
     public void load() {
@@ -134,9 +143,19 @@ public class BleAdvertiserPlugin extends Plugin {
                 advertiser.stopAdvertising(advertiseCallback);
             }
             if (gattServer != null) {
+                for (BluetoothDevice device : connectedDevices) {
+                    try {
+                        gattServer.cancelConnection(device);
+                    } catch (SecurityException e) {
+                        Log.w(TAG, "Could not cancel connection: " + e.getMessage());
+                    }
+                }
                 gattServer.close();
                 gattServer = null;
             }
+            connectedDevices.clear();
+            subscribedDevicesMessage.clear();
+            subscribedDevicesDiscovery.clear();
             isAdvertising = false;
             call.resolve();
         } catch (SecurityException e) {
@@ -157,10 +176,51 @@ public class BleAdvertiserPlugin extends Plugin {
             public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.i(TAG, "Device connected: " + device.getAddress());
+                    connectedDevices.add(device);
                     notifyDeviceConnected(device);
+                    
+                    sendDiscoveryNotification(device);
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.i(TAG, "Device disconnected: " + device.getAddress());
+                    connectedDevices.remove(device);
+                    subscribedDevicesMessage.remove(device);
+                    subscribedDevicesDiscovery.remove(device);
                     notifyDeviceDisconnected(device);
+                }
+            }
+
+            @Override
+            public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
+                    BluetoothGattDescriptor descriptor, boolean preparedWrite,
+                    boolean responseNeeded, int offset, byte[] value) {
+                try {
+                    if (CCCD_UUID.equals(descriptor.getUuid())) {
+                        UUID charUuid = descriptor.getCharacteristic().getUuid();
+                        
+                        if (Arrays.equals(value, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
+                            if (MESSAGE_CHAR_UUID.equals(charUuid)) {
+                                subscribedDevicesMessage.add(device);
+                                Log.i(TAG, "Device subscribed to message notifications: " + device.getAddress());
+                            } else if (DISCOVERY_CHAR_UUID.equals(charUuid)) {
+                                subscribedDevicesDiscovery.add(device);
+                                Log.i(TAG, "Device subscribed to discovery notifications: " + device.getAddress());
+                                
+                                sendDiscoveryNotification(device);
+                            }
+                        } else if (Arrays.equals(value, BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE)) {
+                            if (MESSAGE_CHAR_UUID.equals(charUuid)) {
+                                subscribedDevicesMessage.remove(device);
+                            } else if (DISCOVERY_CHAR_UUID.equals(charUuid)) {
+                                subscribedDevicesDiscovery.remove(device);
+                            }
+                        }
+
+                        if (responseNeeded) {
+                            gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value);
+                        }
+                    }
+                } catch (SecurityException e) {
+                    Log.e(TAG, "Security exception on descriptor write: " + e.getMessage());
                 }
             }
 
@@ -169,13 +229,16 @@ public class BleAdvertiserPlugin extends Plugin {
                     BluetoothGattCharacteristic characteristic) {
                 try {
                     if (characteristic.getUuid().equals(DISCOVERY_CHAR_UUID)) {
-                        String discoveryJson = "{\"type\":\"discovery\",\"userId\":\"" + currentUserId + 
-                            "\",\"username\":\"" + currentUsername + "\",\"timestamp\":" + System.currentTimeMillis() + "}";
-                        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset,
-                            discoveryJson.getBytes(StandardCharsets.UTF_8));
+                        String discoveryJson = "{\"id\":\"" + UUID.randomUUID().toString() + 
+                            "\",\"type\":\"discovery\",\"userId\":\"" + currentUserId + 
+                            "\",\"username\":\"" + currentUsername + 
+                            "\",\"timestamp\":" + System.currentTimeMillis() + "}";
+                        byte[] data = discoveryJson.getBytes(StandardCharsets.UTF_8);
+                        byte[] response = offset < data.length ? 
+                            Arrays.copyOfRange(data, offset, data.length) : new byte[0];
+                        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, response);
                     } else {
-                        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset,
-                            new byte[0]);
+                        gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, new byte[0]);
                     }
                 } catch (SecurityException e) {
                     Log.e(TAG, "Security exception on read: " + e.getMessage());
@@ -191,6 +254,8 @@ public class BleAdvertiserPlugin extends Plugin {
                     
                     if (characteristic.getUuid().equals(MESSAGE_CHAR_UUID)) {
                         notifyMessageReceived(device, data);
+                        
+                        broadcastToSubscribers(characteristic, value, device);
                     } else if (characteristic.getUuid().equals(DISCOVERY_CHAR_UUID)) {
                         notifyDiscoveryReceived(device, data);
                     }
@@ -214,28 +279,93 @@ public class BleAdvertiserPlugin extends Plugin {
                 MESSAGE_CHAR_UUID,
                 BluetoothGattCharacteristic.PROPERTY_READ | 
                 BluetoothGattCharacteristic.PROPERTY_WRITE | 
+                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE |
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE
             );
+            BluetoothGattDescriptor messageCccd = new BluetoothGattDescriptor(
+                CCCD_UUID,
+                BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE
+            );
+            messageChar.addDescriptor(messageCccd);
 
             BluetoothGattCharacteristic discoveryChar = new BluetoothGattCharacteristic(
                 DISCOVERY_CHAR_UUID,
                 BluetoothGattCharacteristic.PROPERTY_READ | 
                 BluetoothGattCharacteristic.PROPERTY_WRITE | 
+                BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE |
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ | 
                 BluetoothGattCharacteristic.PERMISSION_WRITE
             );
+            BluetoothGattDescriptor discoveryCccd = new BluetoothGattDescriptor(
+                CCCD_UUID,
+                BluetoothGattDescriptor.PERMISSION_READ | BluetoothGattDescriptor.PERMISSION_WRITE
+            );
+            discoveryChar.addDescriptor(discoveryCccd);
 
             service.addCharacteristic(messageChar);
             service.addCharacteristic(discoveryChar);
             gattServer.addService(service);
 
-            Log.i(TAG, "GATT server started with Offchat service");
+            Log.i(TAG, "GATT server started with Offchat service (notifications enabled)");
         } catch (SecurityException e) {
             Log.e(TAG, "Failed to start GATT server: " + e.getMessage());
             throw e;
+        }
+    }
+    
+    private void sendDiscoveryNotification(BluetoothDevice targetDevice) {
+        if (gattServer == null) return;
+        
+        try {
+            String discoveryJson = "{\"id\":\"" + UUID.randomUUID().toString() + 
+                "\",\"type\":\"discovery\",\"userId\":\"" + currentUserId + 
+                "\",\"username\":\"" + currentUsername + 
+                "\",\"timestamp\":" + System.currentTimeMillis() + "}";
+            byte[] data = discoveryJson.getBytes(StandardCharsets.UTF_8);
+            
+            BluetoothGattService service = gattServer.getService(SERVICE_UUID);
+            if (service == null) return;
+            
+            BluetoothGattCharacteristic discoveryChar = service.getCharacteristic(DISCOVERY_CHAR_UUID);
+            if (discoveryChar == null) return;
+            
+            discoveryChar.setValue(data);
+            gattServer.notifyCharacteristicChanged(targetDevice, discoveryChar, false);
+            
+            Log.i(TAG, "Sent discovery notification to: " + targetDevice.getAddress());
+        } catch (SecurityException e) {
+            Log.e(TAG, "Failed to send discovery notification: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Error sending discovery notification: " + e.getMessage());
+        }
+    }
+
+    private void broadcastToSubscribers(BluetoothGattCharacteristic characteristic, byte[] value, BluetoothDevice sender) {
+        if (gattServer == null) return;
+        
+        Set<BluetoothDevice> subscribers;
+        if (MESSAGE_CHAR_UUID.equals(characteristic.getUuid())) {
+            subscribers = subscribedDevicesMessage;
+        } else if (DISCOVERY_CHAR_UUID.equals(characteristic.getUuid())) {
+            subscribers = subscribedDevicesDiscovery;
+        } else {
+            return;
+        }
+        
+        characteristic.setValue(value);
+        
+        for (BluetoothDevice device : subscribers) {
+            if (device.equals(sender)) continue;
+            
+            try {
+                gattServer.notifyCharacteristicChanged(device, characteristic, false);
+                Log.d(TAG, "Broadcast notification to: " + device.getAddress());
+            } catch (SecurityException e) {
+                Log.e(TAG, "Failed to notify device: " + e.getMessage());
+            }
         }
     }
 
