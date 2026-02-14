@@ -660,6 +660,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(statusCode).json(healthCheck);
   });
 
+  // Crypto market data proxy endpoints (CoinGecko API)
+  app.get("/api/crypto/prices", async (req, res) => {
+    try {
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h',
+        {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Offchat/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Failed to fetch crypto prices:', error);
+      res.status(502).json({ message: "Failed to fetch cryptocurrency data" });
+    }
+  });
+
+  app.get("/api/crypto/history/:coinId", async (req, res) => {
+    try {
+      const { coinId } = req.params;
+      const days = req.query.days || '7';
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart?vs_currency=usd&days=${days}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Offchat/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error(`Failed to fetch crypto history for ${req.params.coinId}:`, error);
+      res.status(502).json({ message: "Failed to fetch price history" });
+    }
+  });
+
   // Test object storage upload and retrieval
   app.post("/api/test/upload", async (req, res) => {
     try {
