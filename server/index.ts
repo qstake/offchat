@@ -11,6 +11,7 @@ app.use((req, res, next) => {
     'https://localhost',
     'http://localhost',
     'https://offchat.app',
+    'https://offchat.replit.app',
   ];
   if (origin && allowedOrigins.some(o => origin.startsWith(o))) {
     res.header('Access-Control-Allow-Origin', origin);
@@ -19,7 +20,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-wallet-address');
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
