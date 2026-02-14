@@ -1,5 +1,5 @@
 // Offchat Service Worker for PWA functionality
-const CACHE_NAME = 'offchat-v1.0.0';
+const CACHE_NAME = 'offchat-v1.1.0';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache for offline usage
@@ -49,8 +49,17 @@ self.addEventListener('activate', event => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   if (event.request.mode === 'navigate') {
-    // Handle navigation requests
     event.respondWith(
       fetch(event.request)
         .catch(() => {
@@ -61,20 +70,21 @@ self.addEventListener('fetch', event => {
         })
     );
   } else {
-    // Handle other requests
     event.respondWith(
-      caches.match(event.request)
+      fetch(event.request)
         .then(response => {
-          if (response) {
-            return response;
-          }
-          return fetch(event.request);
+          return response;
         })
         .catch(() => {
-          // Return offline page for navigation requests
-          if (event.request.destination === 'document') {
-            return caches.match(OFFLINE_URL);
-          }
+          return caches.match(event.request)
+            .then(response => {
+              if (response) {
+                return response;
+              }
+              if (event.request.destination === 'document') {
+                return caches.match(OFFLINE_URL);
+              }
+            });
         })
     );
   }
