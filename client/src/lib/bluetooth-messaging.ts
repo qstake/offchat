@@ -8,6 +8,7 @@ declare global {
     connect(): Promise<BluetoothRemoteGATTServer>;
     disconnect(): void;
     getPrimaryService(service: BluetoothServiceUUID): Promise<BluetoothRemoteGATTService>;
+    getPrimaryServices(service?: BluetoothServiceUUID): Promise<BluetoothRemoteGATTService[]>;
   }
 
   interface BluetoothRemoteGATTService {
@@ -136,22 +137,52 @@ export class BluetoothMessagingService {
     console.log('Stopped Bluetooth advertising');
   }
 
-  // Connect to a nearby Offchat device
+  // Connect to a nearby Offchat device via Web Bluetooth
   async connectToPeer(): Promise<BluetoothPeer> {
     try {
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { namePrefix: 'Offchat' },
-          { services: [OFFCHAT_SERVICE_UUID] }
-        ],
-        optionalServices: [OFFCHAT_SERVICE_UUID]
-      });
+      let device: BluetoothDevice;
+      
+      try {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [
+            { namePrefix: 'Offchat' },
+            { services: [OFFCHAT_SERVICE_UUID] }
+          ],
+          optionalServices: [OFFCHAT_SERVICE_UUID]
+        });
+      } catch (filterError: any) {
+        if (filterError.name === 'NotFoundError') {
+          device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [OFFCHAT_SERVICE_UUID]
+          });
+        } else {
+          throw filterError;
+        }
+      }
 
       const server = await device.gatt!.connect();
-      const service = await server.getPrimaryService(OFFCHAT_SERVICE_UUID);
       
-      const messageCharacteristic = await service.getCharacteristic(OFFCHAT_MESSAGE_CHARACTERISTIC_UUID);
-      const discoveryCharacteristic = await service.getCharacteristic(OFFCHAT_DISCOVERY_CHARACTERISTIC_UUID);
+      let messageCharacteristic: BluetoothRemoteGATTCharacteristic;
+      let discoveryCharacteristic: BluetoothRemoteGATTCharacteristic;
+      
+      try {
+        const service = await server.getPrimaryService(OFFCHAT_SERVICE_UUID);
+        messageCharacteristic = await service.getCharacteristic(OFFCHAT_MESSAGE_CHARACTERISTIC_UUID);
+        discoveryCharacteristic = await service.getCharacteristic(OFFCHAT_DISCOVERY_CHARACTERISTIC_UUID);
+      } catch {
+        const services = await server.getPrimaryServices();
+        if (services.length === 0) {
+          throw new Error('No compatible services found on this device');
+        }
+        const service = services[0];
+        const chars = await service.getCharacteristics();
+        if (chars.length < 2) {
+          throw new Error('Device does not have required characteristics');
+        }
+        messageCharacteristic = chars[0];
+        discoveryCharacteristic = chars.length > 1 ? chars[1] : chars[0];
+      }
 
       const peer: BluetoothPeer = {
         device,
@@ -165,21 +196,14 @@ export class BluetoothMessagingService {
         discoveryExpectedLength: 0
       };
 
-      // Set up message listening
       await this.setupMessageListener(peer);
-      
-      // Add to peers map
       this.peers.set(device.id, peer);
 
-      // Handle disconnection
       device.addEventListener('gattserverdisconnected', () => {
         this.handlePeerDisconnected(peer);
       });
 
-      // Send discovery message to introduce ourselves
       await this.sendDiscoveryMessage(peer);
-
-      // Notify handlers
       this.peerHandlers.forEach(handler => handler(peer, 'connected'));
 
       console.log(`Connected to Offchat peer: ${device.name || device.id}`);
@@ -189,6 +213,11 @@ export class BluetoothMessagingService {
       console.error('Failed to connect to peer:', error);
       throw error;
     }
+  }
+
+  // Get advertising status
+  getIsAdvertising(): boolean {
+    return this.isAdvertising;
   }
 
   // Set up message listener for a peer
