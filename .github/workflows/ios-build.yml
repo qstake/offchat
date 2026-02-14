@@ -31,7 +31,36 @@ jobs:
     - name: Create Capacitor config
       run: |
         rm -f capacitor.config.ts capacitor.config.json
-        echo '{"appId":"app.offchat.messenger","appName":"Offchat","webDir":"dist/public","server":{"iosScheme":"https"},"plugins":{"BluetoothLe":{"displayStrings":{"scanning":"Searching for Offchat users...","cancel":"Cancel","availableDevices":"Nearby Offchat Users","noDeviceFound":"No Offchat users found nearby"}}}}' > capacitor.config.json
+        cat > capacitor.config.json << 'EOF'
+        {
+          "appId": "app.offchat.messenger",
+          "appName": "Offchat",
+          "webDir": "dist/public",
+          "server": {
+            "androidScheme": "https",
+            "iosScheme": "https",
+            "hostname": "offchat.app",
+            "allowNavigation": ["offchat.app", "*.offchat.app"]
+          },
+          "plugins": {
+            "CapacitorHttp": {
+              "enabled": true
+            },
+            "StatusBar": {
+              "style": "DARK",
+              "overlaysWebView": true
+            },
+            "BluetoothLe": {
+              "displayStrings": {
+                "scanning": "Searching for Offchat users...",
+                "cancel": "Cancel",
+                "availableDevices": "Nearby Offchat Users",
+                "noDeviceFound": "No Offchat users found nearby"
+              }
+            }
+          }
+        }
+        EOF
 
     - name: Add iOS platform
       run: npx cap add ios 2>&1 || true
