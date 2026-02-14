@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, DollarSign, BarChart3, ArrowUpDown, Send, X } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, DollarSign, BarChart3, ArrowUpDown, Send, X, Users, Loader2, Wallet, Copy, Check } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cryptoService, type CryptoCurrency, type CryptoPriceHistory } from "@/lib/crypto-service";
+import { useWallet } from "@/hooks/use-wallet";
 import MatrixBackground from "@/components/matrix-background";
 import { format } from "date-fns";
 
@@ -19,14 +20,34 @@ interface ChartDataPoint {
   formattedDate: string;
 }
 
+const CHAIN_LOGOS: Record<string, { name: string; logo: string; color: string }> = {
+  ethereum: { name: "Ethereum", logo: "https://assets.coingecko.com/coins/images/279/small/ethereum.png", color: "#627EEA" },
+  bsc: { name: "BNB Chain", logo: "https://assets.coingecko.com/coins/images/825/small/bnb-icon2_2x.png", color: "#F0B90B" },
+  arbitrum: { name: "Arbitrum", logo: "https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg", color: "#28A0F0" },
+  polygon: { name: "Polygon", logo: "https://assets.coingecko.com/coins/images/4713/small/polygon.png", color: "#8247E5" },
+  base: { name: "Base", logo: "https://assets.coingecko.com/asset_platforms/images/131/small/base.jpeg", color: "#0052FF" },
+  optimism: { name: "Optimism", logo: "https://assets.coingecko.com/coins/images/25244/small/Optimism.png", color: "#FF0420" },
+};
+
 export default function CryptoDetailPage() {
   const { t } = useTranslation();
   const params = useParams();
   const [, setLocation] = useLocation();
   const [selectedTimeframe, setSelectedTimeframe] = useState<number>(7);
   const [showSendOptions, setShowSendOptions] = useState(false);
+  const [sendMode, setSendMode] = useState<'options' | 'friend' | 'address' | null>(null);
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendAddress, setSendAddress] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
+  const { walletAddress, currentUser, sendTransaction } = useWallet();
   
   const coinId = params.coinId;
+
+  const { data: friends = [] } = useQuery({
+    queryKey: ['/api/chats', currentUser?.id],
+    enabled: !!currentUser?.id && sendMode === 'friend',
+  });
 
   // Fetch current crypto data
   const { data: cryptoData, isLoading: isCryptoLoading } = useQuery({
@@ -150,8 +171,8 @@ export default function CryptoDetailPage() {
             </Button>
             
             <div className="flex items-center space-x-2">
-              <h1 className="text-sm md:text-base font-bold gradient-text font-mono">
-                CRYPTO ANALYSIS
+              <h1 className="text-sm md:text-base font-bold text-white font-mono tracking-wider">
+                CRYPTO <span className="text-primary">ANALYSIS</span>
               </h1>
             </div>
             
@@ -242,42 +263,169 @@ export default function CryptoDetailPage() {
               </button>
             </div>
 
-            {/* Send Options Modal */}
+            {/* Send Modal */}
             {showSendOptions && (
-              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setShowSendOptions(false)}>
-                <div className="bg-[#0a0a0a] border border-green-500/15 rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); }}>
+                <div className="bg-[#0a0a0a] border border-green-500/15 rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between p-4 border-b border-green-500/10">
-                    <h3 className="text-sm font-bold text-white">Send {cryptoData?.symbol?.toUpperCase()}</h3>
-                    <button onClick={() => setShowSendOptions(false)} className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
+                    <div className="flex items-center gap-2">
+                      {sendMode && (
+                        <button onClick={() => { setSendMode(null); setSendAmount(''); setSendAddress(''); }} className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
+                          <ArrowLeft className="w-3 h-3" />
+                        </button>
+                      )}
+                      <h3 className="text-sm font-bold text-white">
+                        {sendMode === 'friend' ? 'Send to Friend' : sendMode === 'address' ? 'Send to Address' : `Send ${cryptoData?.symbol?.toUpperCase()}`}
+                      </h3>
+                    </div>
+                    <button onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); }} className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="p-4 space-y-3">
-                    <button
-                      onClick={() => { setShowSendOptions(false); setLocation('/'); }}
-                      className="w-full flex items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-green-500/5 hover:border-green-500/15 transition-all"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                        <Send className="w-5 h-5 text-green-400" />
+
+                  {!sendMode && (
+                    <div className="p-4 space-y-3">
+                      <button
+                        onClick={() => setSendMode('friend')}
+                        className="w-full flex items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-green-500/5 hover:border-green-500/15 transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                          <Users className="w-5 h-5 text-green-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-semibold text-white">Send to Friend</div>
+                          <div className="text-[11px] text-white/40">Choose a contact from your chats</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSendMode('address')}
+                        className="w-full flex items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-blue-500/5 hover:border-blue-500/15 transition-all"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-semibold text-white">Send to Address</div>
+                          <div className="text-[11px] text-white/40">Enter a wallet address manually</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
+                  {sendMode === 'friend' && (
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {Array.isArray(friends) && friends.length > 0 ? (
+                        friends.filter((chat: any) => !chat.isGroup && chat.otherUserId).map((chat: any) => (
+                          <button
+                            key={chat.id}
+                            onClick={() => {
+                              if (chat.otherUserId) {
+                                fetch(`/api/users/${chat.otherUserId}`)
+                                  .then(r => r.ok ? r.json() : null)
+                                  .then(user => {
+                                    if (user?.walletAddress) {
+                                      setSendAddress(user.walletAddress);
+                                      setSendMode('address');
+                                    }
+                                  });
+                              }
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-green-500/5 hover:border-green-500/15 transition-all"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center overflow-hidden">
+                              {chat.avatar ? (
+                                <img src={chat.avatar} alt="" className="w-full h-full object-cover rounded-full" />
+                              ) : (
+                                <span className="text-green-400 font-mono text-sm font-bold">
+                                  {(chat.name || '?')[0].toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <div className="text-sm font-semibold text-white truncate">{chat.name}</div>
+                              <div className="text-[11px] text-white/40 font-mono">Contact</div>
+                            </div>
+                            <Send className="w-4 h-4 text-green-400/50" />
+                          </button>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Users className="w-8 h-8 text-white/20 mx-auto mb-3" />
+                          <p className="text-sm text-white/40">No contacts found</p>
+                          <p className="text-[11px] text-white/25 mt-1">Start a chat to add contacts</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {sendMode === 'address' && (
+                    <div className="p-4 space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-mono text-green-400/70">Recipient Address</label>
+                        <input
+                          type="text"
+                          value={sendAddress}
+                          onChange={(e) => setSendAddress(e.target.value)}
+                          placeholder="0x..."
+                          className="w-full bg-black/80 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-green-500/40"
+                        />
                       </div>
-                      <div className="text-left">
-                        <div className="text-sm font-semibold text-white">Send to Friend</div>
-                        <div className="text-[11px] text-white/40">Choose a contact from your chats</div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-mono text-green-400/70">Amount ({cryptoData?.symbol?.toUpperCase()})</label>
+                        <input
+                          type="number"
+                          value={sendAmount}
+                          onChange={(e) => setSendAmount(e.target.value)}
+                          placeholder="0.00"
+                          step="any"
+                          className="w-full bg-black/80 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-green-500/40"
+                        />
                       </div>
-                    </button>
-                    <button
-                      onClick={() => { setShowSendOptions(false); setLocation('/swap'); }}
-                      className="w-full flex items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-blue-500/5 hover:border-blue-500/15 transition-all"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                        <DollarSign className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-semibold text-white">Send to Address</div>
-                        <div className="text-[11px] text-white/40">Enter a wallet address manually</div>
-                      </div>
-                    </button>
-                  </div>
+                      {sendAddress && sendAmount && (
+                        <div className="bg-white/[0.02] border border-white/8 rounded-xl p-3 space-y-1">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-white/40">To</span>
+                            <span className="text-white/70 font-mono">{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-white/40">Amount</span>
+                            <span className="text-white/70 font-mono">{sendAmount} {cryptoData?.symbol?.toUpperCase()}</span>
+                          </div>
+                        </div>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (!sendAddress || !sendAmount || !cryptoData) return;
+                          setSendLoading(true);
+                          try {
+                            await sendTransaction({
+                              to: sendAddress,
+                              amount: sendAmount,
+                              token: cryptoData.symbol.toUpperCase(),
+                              network: 'ethereum',
+                            });
+                            setShowSendOptions(false);
+                            setSendMode(null);
+                            setSendAmount('');
+                            setSendAddress('');
+                          } catch (e) {
+                            console.error('Send failed:', e);
+                          } finally {
+                            setSendLoading(false);
+                          }
+                        }}
+                        disabled={!sendAddress || !sendAmount || sendLoading}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-green-600/90 to-emerald-600/90 hover:from-green-500 hover:to-emerald-500 text-white font-semibold text-sm border border-green-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {sendLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                        {sendLoading ? 'Sending...' : 'Send'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -422,6 +570,22 @@ export default function CryptoDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Supported Networks */}
+            <div className="mt-2 pb-6">
+              <div className="text-center mb-4">
+                <span className="text-xs font-mono text-green-400/50 tracking-[0.3em]">SUPPORTED NETWORKS</span>
+                <div className="w-16 h-px bg-green-400/20 mx-auto mt-2"></div>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {Object.entries(CHAIN_LOGOS).map(([key, chain]) => (
+                  <div key={key} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-green-500/15 transition-all">
+                    <img src={chain.logo} alt={chain.name} className="w-6 h-6 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <span className="text-[9px] font-mono text-green-400/60 tracking-wider">{chain.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
