@@ -136,7 +136,7 @@ export default function AuthPage() {
       
       if (existingUser) {
         setWalletData(currentWallet.address, '0.0000');
-        window.location.href = "/chat";
+        setLocation("/chat");
       } else {
         // User will create profile in this same component
       }
@@ -262,7 +262,7 @@ export default function AuthPage() {
       if (loadedWallet) {
         localStorage.setItem('walletAddress', loadedWallet.address);
         localStorage.setItem('walletConnected', 'true');
-        window.location.href = "/chat";
+        setLocation("/chat");
         return;
       }
     } catch (error: any) {
@@ -380,7 +380,7 @@ export default function AuthPage() {
     });
     
     setTimeout(() => {
-      window.location.href = "/chat";
+      setLocation("/chat");
     }, 100);
   };
 
