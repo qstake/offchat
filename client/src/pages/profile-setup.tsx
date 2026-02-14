@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
   });
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [usernameError, setUsernameError] = useState<string>("");
-  const usernameCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestUsernameRef = useRef<string>("");
   const { t } = useTranslation();
 
   const createUserMutation = useMutation({
@@ -82,7 +80,14 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           });
           
           if (!response.ok) {
-            throw new Error('Failed to create user');
+            const errData = await response.json().catch(() => ({}));
+            if (errData.code === 'USERNAME_TAKEN') {
+              throw new Error(t('profile.usernameTaken'));
+            }
+            if (errData.code === 'WALLET_EXISTS') {
+              throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
+            }
+            throw new Error(errData.message || 'Failed to create user');
           }
           
           const user = await response.json();
@@ -114,7 +119,14 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
             },
           });
           if (!response.ok) {
-            throw new Error('Failed to create user');
+            const errData = await response.json().catch(() => ({}));
+            if (errData.code === 'USERNAME_TAKEN') {
+              throw new Error(t('profile.usernameTaken'));
+            }
+            if (errData.code === 'WALLET_EXISTS') {
+              throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
+            }
+            throw new Error(errData.message || 'Failed to create user');
           }
           return response.json();
         }
@@ -221,39 +233,10 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     }
   };
 
-  const checkUsername = async (username: string) => {
-    if (!username || username.length < 3) {
-      setUsernameError("");
-      return;
-    }
-
-    if (!navigator.onLine) {
-      setUsernameError("");
-      return;
-    }
-    
-    try {
-      const response = await fetch(`/api/users/username/${username}`);
-      if (latestUsernameRef.current !== username) return;
-      if (response.status === 200) {
-        setUsernameError(t('profile.usernameTaken'));
-      } else if (response.status === 404) {
-        setUsernameError("");
-      }
-    } catch (error) {
-      setUsernameError("");
-    }
-  };
-
   const handleUsernameChange = (newUsername: string) => {
     setProfileData(prev => ({ ...prev, username: newUsername }));
-    setUsernameError("");
-    latestUsernameRef.current = newUsername;
-    if (usernameCheckTimer.current) {
-      clearTimeout(usernameCheckTimer.current);
-    }
-    if (newUsername.length >= 3) {
-      usernameCheckTimer.current = setTimeout(() => checkUsername(newUsername), 500);
+    if (usernameError) {
+      setUsernameError("");
     }
   };
 
@@ -278,18 +261,24 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
       return;
     }
 
-    if (usernameError && navigator.onLine) {
-      toast({
-        title: t('common.error'),
-        description: usernameError,
-        variant: "destructive",
-      });
-      return;
+    if (navigator.onLine) {
+      try {
+        const checkResponse = await fetch(`/api/users/username/${profileData.username.trim()}`);
+        if (checkResponse.status === 200) {
+          setUsernameError(t('profile.usernameTaken'));
+          toast({
+            title: t('common.error'),
+            description: t('profile.usernameTaken'),
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (e) {
+      }
     }
 
     let finalAvatarPath = null;
     
-    // If avatar is uploaded, include the raw URL - server will process it
     if (profileData.avatar && (profileData.avatar.includes('storage.googleapis.com') || profileData.avatar.includes('/objects/'))) {
       finalAvatarPath = profileData.avatar;
     }
@@ -483,7 +472,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                   <Button
                     type="submit"
                     className="w-full h-10 md:h-14 bg-black border-2 border-green-400 text-green-400 hover:bg-green-400/10 font-mono text-sm md:text-base tracking-wide disabled:border-green-600/30 disabled:text-green-600/50"
-                    disabled={createUserMutation.isPending || !profileData.username.trim() || (!!usernameError && navigator.onLine)}
+                    disabled={createUserMutation.isPending || !profileData.username.trim()}
                   >
                     {createUserMutation.isPending ? t('profile.creatingProfile') : t('profile.initializeMatrix')}
                   </Button>
