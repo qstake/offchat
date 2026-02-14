@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getWebSocketUrl } from "@/lib/queryClient";
 
 interface WebSocketMessage {
   type: string;
@@ -42,10 +43,8 @@ export function GlobalWebSocketProvider({ children, userId }: GlobalWebSocketPro
     
     setConnectionStatus('connecting');
     
-    // Simple WebSocket URL for Replit
-    const currentUrl = new URL(window.location.href);
-    const wsUrl = `${currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'}//${currentUrl.host}/ws`;
-    console.log('🌐 Global WebSocket connecting to:', wsUrl, { location: window.location.href });
+    const wsUrl = getWebSocketUrl();
+    console.log('🌐 Global WebSocket connecting to:', wsUrl);
     const newSocket = new WebSocket(wsUrl);
 
     newSocket.onopen = () => {
