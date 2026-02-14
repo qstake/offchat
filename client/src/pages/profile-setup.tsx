@@ -157,7 +157,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
       }, 500);
       
       setTimeout(() => {
-        setLocation('/chat');
+        window.location.href = '/chat';
       }, 1200);
     },
     onError: (error: any) => {
