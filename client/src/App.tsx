@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { queryClient } from "./lib/queryClient";
@@ -45,13 +46,61 @@ function Router() {
     queryKey: ['/api/users/wallet', walletAddress],
     queryFn: async () => {
       if (!walletAddress) return null;
-      const response = await fetch(`/api/users/wallet/${walletAddress}`);
-      if (response.status === 404) return null;
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
+      try {
+        const response = await fetch(`/api/users/wallet/${walletAddress}`);
+        if (response.status === 404) {
+          const offlineUser = localStorage.getItem('offchat_offline_user');
+          if (offlineUser) {
+            const parsed = JSON.parse(offlineUser);
+            if (parsed.walletAddress === walletAddress) return parsed;
+          }
+          return null;
+        }
+        if (!response.ok) throw new Error('Failed to fetch user');
+        const user = await response.json();
+        const offlineFull = localStorage.getItem('offchat_offline_user_full');
+        if (offlineFull) {
+          localStorage.removeItem('offchat_offline_user');
+          localStorage.removeItem('offchat_offline_user_full');
+        }
+        return user;
+      } catch (error) {
+        const offlineUser = localStorage.getItem('offchat_offline_user');
+        if (offlineUser) {
+          const parsed = JSON.parse(offlineUser);
+          if (parsed.walletAddress === walletAddress) return parsed;
+        }
+        return null;
+      }
     },
     enabled: !!walletAddress && isConnected,
+    retry: false,
   });
+
+  useEffect(() => {
+    const syncOfflineUser = async () => {
+      const offlineFull = localStorage.getItem('offchat_offline_user_full');
+      if (!offlineFull || !navigator.onLine) return;
+      try {
+        const userData = JSON.parse(offlineFull);
+        const response = await fetch('/api/users', {
+          method: 'POST',
+          body: JSON.stringify(userData),
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          localStorage.removeItem('offchat_offline_user');
+          localStorage.removeItem('offchat_offline_user_full');
+          queryClient.invalidateQueries({ queryKey: ['/api/users/wallet'] });
+        }
+      } catch (e) {
+        console.log('Will sync offline user later');
+      }
+    };
+    window.addEventListener('online', syncOfflineUser);
+    syncOfflineUser();
+    return () => window.removeEventListener('online', syncOfflineUser);
+  }, [walletAddress]);
 
   return (
     <Switch>
