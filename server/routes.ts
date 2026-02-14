@@ -660,35 +660,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(statusCode).json(healthCheck);
   });
 
-  // Crypto market data proxy endpoints (CoinGecko API)
-  app.get("/api/crypto/prices", async (req, res) => {
-    try {
-      const response = await fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h',
-        {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Offchat/1.0'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`CoinGecko API responded with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      res.json(data);
-    } catch (error) {
-      console.error('Failed to fetch crypto prices:', error);
-      res.status(502).json({ message: "Failed to fetch cryptocurrency data" });
-    }
-  });
+  // Crypto history proxy with in-memory cache
+  const historyCache: Record<string, { data: any; timestamp: number }> = {};
+  const HISTORY_CACHE_TTL = 120_000;
 
   app.get("/api/crypto/history/:coinId", async (req, res) => {
+    const { coinId } = req.params;
+    const days = req.query.days || '7';
+    const cacheKey = `history_${coinId}_${days}`;
+    const cached = historyCache[cacheKey];
+    if (cached && Date.now() - cached.timestamp < HISTORY_CACHE_TTL) {
+      return res.json(cached.data);
+    }
+
     try {
-      const { coinId } = req.params;
-      const days = req.query.days || '7';
       const response = await fetch(
         `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart?vs_currency=usd&days=${days}`,
         {
@@ -700,13 +685,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       if (!response.ok) {
+        if (cached) {
+          console.warn(`CoinGecko history ${response.status}, serving stale cache`);
+          return res.json(cached.data);
+        }
         throw new Error(`CoinGecko API responded with status: ${response.status}`);
       }
 
       const data = await response.json();
+      historyCache[cacheKey] = { data, timestamp: Date.now() };
       res.json(data);
     } catch (error) {
-      console.error(`Failed to fetch crypto history for ${req.params.coinId}:`, error);
+      console.error(`Failed to fetch crypto history for ${coinId}:`, error);
+      if (cached) {
+        return res.json(cached.data);
+      }
       res.status(502).json({ message: "Failed to fetch price history" });
     }
   });
@@ -2179,30 +2172,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const results: any[] = [];
     let rank = 1;
 
-    const [offcResult, cgResult] = await Promise.allSettled([
-      fetch('https://api.dexscreener.com/latest/dex/pairs/bsc/0xb8c3cd64fc8ff7220506c9f576b6bdcb8c271bfb', { signal: AbortSignal.timeout(5000) })
-        .then(r => r.ok ? r.json() : null).catch(() => null),
+    const cgResult = await Promise.resolve(
       fetch(
         `https://api.coingecko.com/api/v3/coins/markets?ids=${COINGECKO_IDS}&vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h`,
         { signal: AbortSignal.timeout(8000) }
-      ).then(r => r.ok ? r.json() : null).catch(() => null),
-    ]);
+      ).then(r => r.ok ? r.json() : null).catch(() => null)
+    );
 
-    const offcData = offcResult.status === 'fulfilled' ? offcResult.value : null;
-    if (offcData?.pairs?.[0]) {
-      const pair = offcData.pairs[0];
-      const price = parseFloat(pair.priceUsd) || 0.00006312;
-      const change24h = parseFloat(pair.priceChange?.h24) || 0;
-      results.push({
-        id: 'offchat-offc', symbol: 'offc', name: 'Offchat Token',
-        current_price: price, price_change_percentage_24h: change24h,
-        market_cap: price * 1000000000, market_cap_rank: rank++,
-        image: 'https://dd.dexscreener.com/ds-data/tokens/bsc/0xaf62c16e46238c14ab8eda78285feb724e7d4444.png',
-        price_change_24h: (price * change24h) / 100
-      });
-    }
-
-    const cgData = cgResult.status === 'fulfilled' ? cgResult.value : null;
+    const cgData = cgResult;
     if (Array.isArray(cgData)) {
       for (const coin of cgData) {
         results.push({
