@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,8 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
   });
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [usernameError, setUsernameError] = useState<string>("");
-  const [usernameCheckTimer, setUsernameCheckTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const usernameCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestUsernameRef = useRef<string>("");
   const { t } = useTranslation();
 
   const createUserMutation = useMutation({
@@ -233,6 +234,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     
     try {
       const response = await fetch(`/api/users/username/${username}`);
+      if (latestUsernameRef.current !== username) return;
       if (response.status === 200) {
         setUsernameError(t('profile.usernameTaken'));
       } else if (response.status === 404) {
@@ -246,12 +248,12 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
   const handleUsernameChange = (newUsername: string) => {
     setProfileData(prev => ({ ...prev, username: newUsername }));
     setUsernameError("");
-    if (usernameCheckTimer) {
-      clearTimeout(usernameCheckTimer);
+    latestUsernameRef.current = newUsername;
+    if (usernameCheckTimer.current) {
+      clearTimeout(usernameCheckTimer.current);
     }
     if (newUsername.length >= 3) {
-      const timer = setTimeout(() => checkUsername(newUsername), 500);
-      setUsernameCheckTimer(timer);
+      usernameCheckTimer.current = setTimeout(() => checkUsername(newUsername), 500);
     }
   };
 
