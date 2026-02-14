@@ -264,11 +264,14 @@ export default function AuthPage() {
         localStorage.setItem('walletConnected', 'true');
         setWalletData(loadedWallet.address, '0.0000');
 
+        let foundUser = null;
+
         const cachedUser = localStorage.getItem('offchat_current_user');
         if (cachedUser) {
           try {
             const user = JSON.parse(cachedUser);
             if (user.walletAddress === loadedWallet.address) {
+              foundUser = user;
               queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
             }
           } catch (e) {
@@ -280,6 +283,7 @@ export default function AuthPage() {
           const response = await fetch(`/api/users/wallet/${loadedWallet.address}`);
           if (response.ok) {
             const user = await response.json();
+            foundUser = user;
             queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
             localStorage.setItem('offchat_current_user', JSON.stringify(user));
           }
@@ -287,7 +291,12 @@ export default function AuthPage() {
           console.warn('Could not fetch user from API, using cached data:', e);
         }
 
-        setLocation("/chat");
+        if (foundUser) {
+          setLocation("/chat");
+        } else {
+          setCurrentWallet(loadedWallet);
+          setCurrentStep('profile');
+        }
         return;
       }
     } catch (error: any) {
