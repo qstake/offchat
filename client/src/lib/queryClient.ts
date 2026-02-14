@@ -1,5 +1,40 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const isCapacitor = typeof window !== 'undefined' &&
+  (window.location.protocol === 'capacitor:' ||
+   window.location.protocol === 'ionic:' ||
+   !!(window as any).Capacitor ||
+   (window.location.hostname === 'localhost' && typeof (window as any).AndroidBridge !== 'undefined'));
+
+const API_BASE = isCapacitor ? 'https://offchat.app' : '';
+const WS_BASE = isCapacitor ? 'wss://offchat.app' : '';
+
+export function getApiUrl(path: string): string {
+  if (path.startsWith('/api')) {
+    return API_BASE + path;
+  }
+  return path;
+}
+
+export function getWebSocketUrl(): string {
+  if (isCapacitor) {
+    return WS_BASE + '/ws';
+  }
+  const currentUrl = new URL(window.location.href);
+  return `${currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'}//${currentUrl.host}/ws`;
+}
+
+const originalFetch = window.fetch.bind(window);
+window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (typeof input === 'string' && input.startsWith('/api')) {
+    return originalFetch(getApiUrl(input), init);
+  }
+  if (input instanceof Request && input.url.startsWith('/api')) {
+    return originalFetch(getApiUrl(input.url), { ...init, method: input.method, headers: input.headers, body: input.body });
+  }
+  return originalFetch(input, init);
+} as typeof fetch;
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
