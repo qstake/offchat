@@ -43,71 +43,84 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      const isOnline = navigator.onLine;
-
-      if (!isOnline) {
+      const saveOfflineUser = (userData: any) => {
         const offlineUser = {
           id: Date.now(),
           username: userData.username,
           walletAddress: userData.walletAddress,
           bio: userData.bio || null,
-          avatar: userData.avatar || null,
+          avatar: null,
           isOnline: false,
           createdOffline: true,
         };
         localStorage.setItem('offchat_offline_user', JSON.stringify(offlineUser));
-        localStorage.setItem('offchat_offline_user_full', JSON.stringify(userData));
+        const safeData = {
+          username: userData.username,
+          walletAddress: userData.walletAddress,
+          bio: userData.bio || null,
+          avatar: null,
+        };
+        localStorage.setItem('offchat_offline_user_full', JSON.stringify(safeData));
         return offlineUser;
+      };
+
+      if (!navigator.onLine) {
+        return saveOfflineUser(userData);
       }
 
-      if (userData.avatar && (userData.avatar.includes('storage.googleapis.com') || userData.avatar.includes('/objects/'))) {
-        const userWithoutAvatar = { ...userData, avatar: null };
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          body: JSON.stringify(userWithoutAvatar),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error('Failed to create user');
-        }
-        
-        const user = await response.json();
-        
-        try {
-          const avatarResponse = await fetch(`/api/users/${user.id}/avatar`, {
-            method: 'PUT',
+      try {
+        if (userData.avatar && (userData.avatar.includes('storage.googleapis.com') || userData.avatar.includes('/objects/'))) {
+          const userWithoutAvatar = { ...userData, avatar: null };
+          const response = await fetch('/api/users', {
+            method: 'POST',
+            body: JSON.stringify(userWithoutAvatar),
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ avatarURL: userData.avatar }),
           });
           
-          if (avatarResponse.ok) {
-            const { objectPath } = await avatarResponse.json();
-            user.avatar = objectPath;
+          if (!response.ok) {
+            throw new Error('Failed to create user');
           }
-        } catch (error) {
-          console.error('Error setting avatar after user creation:', error);
+          
+          const user = await response.json();
+          
+          try {
+            const avatarResponse = await fetch(`/api/users/${user.id}/avatar`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ avatarURL: userData.avatar }),
+            });
+            
+            if (avatarResponse.ok) {
+              const { objectPath } = await avatarResponse.json();
+              user.avatar = objectPath;
+            }
+          } catch (error) {
+            console.error('Error setting avatar after user creation:', error);
+          }
+          
+          return user;
+        } else {
+          const response = await fetch('/api/users', {
+            method: 'POST',
+            body: JSON.stringify(userData),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to create user');
+          }
+          return response.json();
         }
-        
-        return user;
-      } else {
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          body: JSON.stringify(userData),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error('Failed to create user');
+      } catch (error) {
+        if (!navigator.onLine || (error instanceof TypeError && error.message.includes('fetch'))) {
+          return saveOfflineUser(userData);
         }
-        return response.json();
+        throw error;
       }
     },
     onSuccess: (user) => {
