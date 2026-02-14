@@ -494,13 +494,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.createUser(userData);
       res.status(201).json(user);
-    } catch (error) {
+    } catch (error: any) {
       console.error('User creation error:', error);
       if (error instanceof z.ZodError) {
         console.error('Validation error details:', error.errors);
         return res.status(400).json({ message: "Invalid user data", errors: error.errors });
       }
-      res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
+      const errMsg = error?.message || String(error);
+      if (errMsg.includes('users_username_unique') || errMsg.includes('duplicate key') && errMsg.includes('username')) {
+        return res.status(409).json({ message: "Username already taken", code: "USERNAME_TAKEN" });
+      }
+      if (errMsg.includes('users_wallet_address_unique') || errMsg.includes('duplicate key') && errMsg.includes('wallet_address')) {
+        return res.status(409).json({ message: "Wallet already registered", code: "WALLET_EXISTS" });
+      }
+      res.status(500).json({ message: "Internal server error", error: errMsg });
     }
   });
 
