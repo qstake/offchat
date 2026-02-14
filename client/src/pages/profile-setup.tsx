@@ -39,6 +39,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
   });
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [usernameError, setUsernameError] = useState<string>("");
+  const [usernameCheckTimer, setUsernameCheckTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const { t } = useTranslation();
 
   const createUserMutation = useMutation({
@@ -219,9 +220,13 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     }
   };
 
-  // Check username availability
   const checkUsername = async (username: string) => {
     if (!username || username.length < 3) {
+      setUsernameError("");
+      return;
+    }
+
+    if (!navigator.onLine) {
       setUsernameError("");
       return;
     }
@@ -235,17 +240,18 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
       }
     } catch (error) {
       setUsernameError("");
-      console.log('Offline mode: skipping username check');
     }
   };
 
   const handleUsernameChange = (newUsername: string) => {
     setProfileData(prev => ({ ...prev, username: newUsername }));
-    // Debounce username check
+    setUsernameError("");
+    if (usernameCheckTimer) {
+      clearTimeout(usernameCheckTimer);
+    }
     if (newUsername.length >= 3) {
-      setTimeout(() => checkUsername(newUsername), 500);
-    } else {
-      setUsernameError("");
+      const timer = setTimeout(() => checkUsername(newUsername), 500);
+      setUsernameCheckTimer(timer);
     }
   };
 
@@ -270,7 +276,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
       return;
     }
 
-    if (usernameError) {
+    if (usernameError && navigator.onLine) {
       toast({
         title: t('common.error'),
         description: usernameError,
@@ -475,7 +481,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                   <Button
                     type="submit"
                     className="w-full h-10 md:h-14 bg-black border-2 border-green-400 text-green-400 hover:bg-green-400/10 font-mono text-sm md:text-base tracking-wide disabled:border-green-600/30 disabled:text-green-600/50"
-                    disabled={createUserMutation.isPending || !profileData.username.trim() || !!usernameError}
+                    disabled={createUserMutation.isPending || !profileData.username.trim() || (!!usernameError && navigator.onLine)}
                   >
                     {createUserMutation.isPending ? t('profile.creatingProfile') : t('profile.initializeMatrix')}
                   </Button>
