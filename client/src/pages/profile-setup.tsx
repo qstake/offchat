@@ -68,15 +68,27 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         return saveOfflineUser(userData);
       }
 
+      const isNetworkError = (err: any) => {
+        if (!navigator.onLine) return true;
+        if (err instanceof TypeError) {
+          const msg = (err.message || '').toLowerCase();
+          return msg.includes('fetch') || msg.includes('load failed') || msg.includes('network') || msg.includes('failed to fetch') || msg.includes('cancelled');
+        }
+        return false;
+      };
+
       try {
+        const { getApiUrl } = await import('@/lib/queryClient');
+        
         if (userData.avatar && (userData.avatar.includes('storage.googleapis.com') || userData.avatar.includes('/objects/'))) {
           const userWithoutAvatar = { ...userData, avatar: null };
-          const response = await fetch('/api/users', {
+          const response = await fetch(getApiUrl('/api/users'), {
             method: 'POST',
             body: JSON.stringify(userWithoutAvatar),
             headers: {
               'Content-Type': 'application/json',
             },
+            credentials: 'include',
           });
           
           if (!response.ok) {
@@ -93,12 +105,13 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           const user = await response.json();
           
           try {
-            const avatarResponse = await fetch(`/api/users/${user.id}/avatar`, {
+            const avatarResponse = await fetch(getApiUrl(`/api/users/${user.id}/avatar`), {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ avatarURL: userData.avatar }),
+              credentials: 'include',
             });
             
             if (avatarResponse.ok) {
@@ -111,12 +124,13 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           
           return user;
         } else {
-          const response = await fetch('/api/users', {
+          const response = await fetch(getApiUrl('/api/users'), {
             method: 'POST',
             body: JSON.stringify(userData),
             headers: {
               'Content-Type': 'application/json',
             },
+            credentials: 'include',
           });
           if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -131,7 +145,9 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           return response.json();
         }
       } catch (error) {
-        if (!navigator.onLine || (error instanceof TypeError && error.message.includes('fetch'))) {
+        console.error('[Offchat] Profile creation error:', error);
+        if (isNetworkError(error)) {
+          console.log('[Offchat] Network error detected, saving offline user');
           return saveOfflineUser(userData);
         }
         throw error;
@@ -247,7 +263,10 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
 
     if (navigator.onLine) {
       try {
-        const checkResponse = await fetch(`/api/users/username/${profileData.username.trim()}`);
+        const { getApiUrl } = await import('@/lib/queryClient');
+        const checkResponse = await fetch(getApiUrl(`/api/users/username/${profileData.username.trim()}`), {
+          credentials: 'include',
+        });
         if (checkResponse.status === 200) {
           setUsernameError(t('profile.usernameTaken'));
           toast({
@@ -258,6 +277,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           return;
         }
       } catch (e) {
+        console.log('[Offchat] Username check failed (network issue), proceeding:', e);
       }
     }
 
