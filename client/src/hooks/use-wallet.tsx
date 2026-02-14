@@ -53,6 +53,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('walletConnected');
+    localStorage.removeItem('offchat_current_user');
+    localStorage.removeItem('offchat_offline_user');
+    localStorage.removeItem('offchat_offline_user_full');
     
     toast({
       title: "Wallet Disconnected",
