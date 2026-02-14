@@ -34,9 +34,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Capacitor CLI
+    - name: Install Capacitor CLI and BLE plugin
       run: |
-        npm install @capacitor/core @capacitor/cli @capacitor/android
+        npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor-community/bluetooth-le
         npx cap init Offchat app.offchat.messenger --web-dir dist/public || true
 
     - name: Create Capacitor config
@@ -49,6 +49,16 @@ jobs:
           webDir: 'dist/public',
           server: {
             androidScheme: 'https'
+          },
+          plugins: {
+            BluetoothLe: {
+              displayStrings: {
+                scanning: 'Searching for Offchat users...',
+                cancel: 'Cancel',
+                availableDevices: 'Nearby Offchat Users',
+                noDeviceFound: 'No Offchat users found nearby'
+              }
+            }
           }
         };
         export default config;
@@ -71,7 +81,6 @@ jobs:
 
     - name: Fix Kotlin duplicate class conflict
       run: |
-        # Add resolution strategy to app/build.gradle to force consistent Kotlin stdlib version
         APP_BUILD="android/app/build.gradle"
         if [ -f "$APP_BUILD" ]; then
           cat >> "$APP_BUILD" << 'GRADLE'
@@ -85,7 +94,6 @@ jobs:
         }
         GRADLE
         fi
-        # Also add to root build.gradle if it exists
         ROOT_BUILD="android/build.gradle"
         if [ -f "$ROOT_BUILD" ]; then
           cat >> "$ROOT_BUILD" << 'GRADLE'
@@ -121,16 +129,39 @@ jobs:
 
     - name: Add Bluetooth permissions to AndroidManifest
       run: |
+        MANIFEST="android/app/src/main/AndroidManifest.xml"
         sed -i '/<manifest/a \
         <uses-permission android:name="android.permission.BLUETOOTH" />\
         <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\
-        <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\
+        <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />\
         <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />\
         <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
         <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
+        <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
         <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />' \
-        android/app/src/main/AndroidManifest.xml
+        "$MANIFEST"
+
+    - name: Install native BLE Advertiser plugin
+      run: |
+        PLUGIN_DIR="android/app/src/main/java/app/offchat/messenger/plugins"
+        mkdir -p "$PLUGIN_DIR"
+        cp native-plugins/BleAdvertiserPlugin.java "$PLUGIN_DIR/BleAdvertiserPlugin.java"
+        echo "BLE Advertiser plugin installed"
+
+    - name: Register BLE Advertiser plugin in MainActivity
+      run: |
+        MAIN_ACTIVITY="android/app/src/main/java/app/offchat/messenger/MainActivity.java"
+        if [ -f "$MAIN_ACTIVITY" ]; then
+          sed -i 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity;\nimport app.offchat.messenger.plugins.BleAdvertiserPlugin;/' "$MAIN_ACTIVITY"
+          
+          if grep -q "onCreate" "$MAIN_ACTIVITY"; then
+            sed -i '/super.onCreate/a\        registerPlugin(BleAdvertiserPlugin.class);' "$MAIN_ACTIVITY"
+          else
+            sed -i '/public class MainActivity/a\    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(BleAdvertiserPlugin.class);\n        super.onCreate(savedInstanceState);\n    }' "$MAIN_ACTIVITY"
+          fi
+          echo "BLE Advertiser plugin registered in MainActivity"
+        fi
 
     - name: Sync Capacitor
       run: npx cap sync android
