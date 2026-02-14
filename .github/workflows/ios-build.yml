@@ -26,20 +26,17 @@ jobs:
       run: npm run build
 
     - name: Install Capacitor
-      run: |
-        npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor-community/bluetooth-le
+      run: npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor-community/bluetooth-le
 
     - name: Create Capacitor config
       run: |
         rm -f capacitor.config.ts capacitor.config.json
-        cat > capacitor.config.json << 'EOF'
+        cat > capacitor.config.json << 'CAPEOF'
         {
           "appId": "app.offchat.messenger",
           "appName": "Offchat",
           "webDir": "dist/public",
-          "server": {
-            "iosScheme": "https"
-          },
+          "server": { "iosScheme": "https" },
           "plugins": {
             "BluetoothLe": {
               "displayStrings": {
@@ -51,17 +48,46 @@ jobs:
             }
           }
         }
-        EOF
+        CAPEOF
 
     - name: Add iOS platform
-      run: |
-        npx cap add ios 2>&1 || true
+      run: npx cap add ios 2>&1 || true
 
-    - name: Fix iOS deployment target
+    - name: Patch Podfile for deployment target and signing
       run: |
-        sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" ios/App/Podfile
-        sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' ios/App/App.xcodeproj/project.pbxproj
-        echo "Deployment target set to iOS 16.0"
+        cat > ios/App/Podfile << 'PODEOF'
+        require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+        platform :ios, '16.0'
+        use_frameworks!
+
+        # workaround to avoid Xcode caching of Pods that requires
+        # temporary clearing of build artifacts
+        install! 'cocoapods', :disable_input_output_paths => true
+
+        def capacitor_pods
+          pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+          pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+          pod 'CapacitorCommunityBluetoothLe', :path => '../../node_modules/@capacitor-community/bluetooth-le'
+        end
+
+        target 'App' do
+          capacitor_pods
+        end
+
+        post_install do |installer|
+          assertDeploymentTarget(installer)
+          installer.pods_project.targets.each do |target|
+            target.build_configurations.each do |config|
+              config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+              config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+              config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
+              config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+            end
+          end
+        end
+        PODEOF
+        echo "Podfile written with iOS 16.0 and code signing disabled for Pods"
 
     - name: Install CocoaPods
       working-directory: ios/App
@@ -70,7 +96,7 @@ jobs:
     - name: Copy web assets
       run: npx cap copy ios
 
-    - name: Add Bluetooth usage descriptions
+    - name: Add Bluetooth permissions
       run: |
         PLIST="ios/App/App/Info.plist"
         /usr/libexec/PlistBuddy -c "Add :NSBluetoothAlwaysUsageDescription string 'Offchat uses Bluetooth to send messages to nearby users without internet'" "$PLIST" 2>/dev/null || true
@@ -112,88 +138,21 @@ jobs:
         security list-keychain -d user -s "$KEYCHAIN_PATH"
 
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        PP_UUID=$(security cms -D -i "$PP_PATH" | grep -A1 UUID | grep string | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
-        PP_NAME=$(security cms -D -i "$PP_PATH" | grep -A1 Name | head -2 | grep string | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
+
+        # Extract UUID and Name using PlistBuddy (most reliable method)
+        PLIST_XML=$(security cms -D -i "$PP_PATH")
+        PP_UUID=$(echo "$PLIST_XML" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
+        PP_NAME=$(echo "$PLIST_XML" | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
+
         cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${PP_UUID}.mobileprovision"
 
         echo "PP_UUID=$PP_UUID" >> $GITHUB_ENV
         echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
 
-        echo "Certificate imported, profile installed"
-        echo "  UUID: $PP_UUID"
-        echo "  Name: $PP_NAME"
+        echo "Installed certificate and provisioning profile:"
+        echo "  Profile Name: $PP_NAME"
+        echo "  Profile UUID: $PP_UUID"
         security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-
-    - name: Configure code signing for App target
-      env:
-        TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-      run: |
-        python3 << 'PYEOF'
-        import os, re
-
-        project_path = "ios/App/App.xcodeproj/project.pbxproj"
-        team_id = os.environ["TEAM_ID"]
-        pp_name = os.environ.get("PP_NAME", "")
-        pp_uuid = os.environ.get("PP_UUID", "")
-
-        with open(project_path, "r") as f:
-            content = f.read()
-
-        # Step 1: Disable automatic signing and set team for App target
-        # Find buildSettings blocks that belong to the App target (they contain PRODUCT_BUNDLE_IDENTIFIER)
-        lines = content.split('\n')
-        new_lines = []
-        in_build_settings = False
-        brace_depth = 0
-        is_app_target = False
-        added_signing = False
-
-        for i, line in enumerate(lines):
-            new_lines.append(line)
-
-            if 'buildSettings = {' in line:
-                in_build_settings = True
-                brace_depth = 1
-                is_app_target = False
-                added_signing = False
-                continue
-
-            if in_build_settings:
-                if '{' in line:
-                    brace_depth += line.count('{')
-                if '}' in line:
-                    brace_depth -= line.count('}')
-
-                if 'PRODUCT_BUNDLE_IDENTIFIER' in line and 'app.offchat.messenger' in line:
-                    is_app_target = True
-
-                if brace_depth == 0:
-                    in_build_settings = False
-
-                if is_app_target and not added_signing and 'PRODUCT_NAME' in line:
-                    indent = '\t\t\t\t'
-                    new_lines.append(f'{indent}CODE_SIGN_IDENTITY = "Apple Distribution";')
-                    new_lines.append(f'{indent}CODE_SIGN_STYLE = Manual;')
-                    new_lines.append(f'{indent}DEVELOPMENT_TEAM = {team_id};')
-                    new_lines.append(f'{indent}"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "{pp_name}";')
-                    added_signing = True
-
-        content = '\n'.join(new_lines)
-
-        # Step 2: Also set ProvisioningStyle to Manual in project-level attributes
-        content = content.replace(
-            'ProvisioningStyle = Automatic;',
-            'ProvisioningStyle = Manual;'
-        )
-
-        with open(project_path, "w") as f:
-            f.write(content)
-
-        print(f"Code signing configured:")
-        print(f"  Team: {team_id}")
-        print(f"  Profile: {pp_name}")
-        print(f"  UUID: {pp_uuid}")
-        PYEOF
 
     - name: Build iOS archive
       run: |
@@ -205,14 +164,10 @@ jobs:
           -destination "generic/platform=iOS" \
           clean archive \
           ONLY_ACTIVE_ARCH=NO \
-          | tee build.log | tail -50
-
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
-          echo "=== BUILD FAILED ==="
-          echo "Last 100 lines of build log:"
-          tail -100 build.log
-          exit 1
-        fi
+          CODE_SIGN_STYLE=Manual \
+          DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
+          CODE_SIGN_IDENTITY="Apple Distribution" \
+          PROVISIONING_PROFILE="$PP_UUID"
 
     - name: Export IPA
       run: |
