@@ -44,20 +44,46 @@ function Router() {
   // Check if user exists when wallet is connected
   const { data: currentUser, isLoading: userLoading } = useQuery({
     queryKey: ['/api/users/wallet', walletAddress],
+    initialData: () => {
+      if (!walletAddress) return undefined;
+      const cached = localStorage.getItem('offchat_current_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.walletAddress === walletAddress) return parsed;
+        } catch (e) {}
+      }
+      return undefined;
+    },
     queryFn: async () => {
       if (!walletAddress) return null;
+
+      const getLocalUser = () => {
+        const cached = localStorage.getItem('offchat_current_user');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed.walletAddress === walletAddress) return parsed;
+          } catch (e) {}
+        }
+        const offlineUser = localStorage.getItem('offchat_offline_user');
+        if (offlineUser) {
+          try {
+            const parsed = JSON.parse(offlineUser);
+            if (parsed.walletAddress === walletAddress) return parsed;
+          } catch (e) {}
+        }
+        return null;
+      };
+
       try {
         const response = await fetch(`/api/users/wallet/${walletAddress}`);
         if (response.status === 404) {
-          const offlineUser = localStorage.getItem('offchat_offline_user');
-          if (offlineUser) {
-            const parsed = JSON.parse(offlineUser);
-            if (parsed.walletAddress === walletAddress) return parsed;
-          }
-          return null;
+          return getLocalUser();
         }
         if (!response.ok) throw new Error('Failed to fetch user');
         const user = await response.json();
+        localStorage.setItem('offchat_current_user', JSON.stringify(user));
         const offlineFull = localStorage.getItem('offchat_offline_user_full');
         if (offlineFull) {
           localStorage.removeItem('offchat_offline_user');
@@ -65,12 +91,7 @@ function Router() {
         }
         return user;
       } catch (error) {
-        const offlineUser = localStorage.getItem('offchat_offline_user');
-        if (offlineUser) {
-          const parsed = JSON.parse(offlineUser);
-          if (parsed.walletAddress === walletAddress) return parsed;
-        }
-        return null;
+        return getLocalUser();
       }
     },
     enabled: !!walletAddress && isConnected,
