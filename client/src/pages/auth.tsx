@@ -263,6 +263,30 @@ export default function AuthPage() {
         localStorage.setItem('walletAddress', loadedWallet.address);
         localStorage.setItem('walletConnected', 'true');
         setWalletData(loadedWallet.address, '0.0000');
+
+        const cachedUser = localStorage.getItem('offchat_current_user');
+        if (cachedUser) {
+          try {
+            const user = JSON.parse(cachedUser);
+            if (user.walletAddress === loadedWallet.address) {
+              queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
+            }
+          } catch (e) {
+            console.warn('Could not parse cached user:', e);
+          }
+        }
+
+        try {
+          const response = await fetch(`/api/users/wallet/${loadedWallet.address}`);
+          if (response.ok) {
+            const user = await response.json();
+            queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
+            localStorage.setItem('offchat_current_user', JSON.stringify(user));
+          }
+        } catch (e) {
+          console.warn('Could not fetch user from API, using cached data:', e);
+        }
+
         setLocation("/chat");
         return;
       }
@@ -372,6 +396,7 @@ export default function AuthPage() {
     if (currentWallet) {
       setWalletData(currentWallet.address, '0.0000');
       queryClient.setQueryData(['/api/users/wallet', currentWallet.address], user);
+      localStorage.setItem('offchat_current_user', JSON.stringify(user));
     }
     toast({
       title: t('auth.registrationComplete'), 
