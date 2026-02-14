@@ -43,9 +43,24 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: any) => {
-      // If avatar URL is provided, handle it specially
+      const isOnline = navigator.onLine;
+
+      if (!isOnline) {
+        const offlineUser = {
+          id: Date.now(),
+          username: userData.username,
+          walletAddress: userData.walletAddress,
+          bio: userData.bio || null,
+          avatar: userData.avatar || null,
+          isOnline: false,
+          createdOffline: true,
+        };
+        localStorage.setItem('offchat_offline_user', JSON.stringify(offlineUser));
+        localStorage.setItem('offchat_offline_user_full', JSON.stringify(userData));
+        return offlineUser;
+      }
+
       if (userData.avatar && (userData.avatar.includes('storage.googleapis.com') || userData.avatar.includes('/objects/'))) {
-        // Create user without avatar first
         const userWithoutAvatar = { ...userData, avatar: null };
         const response = await fetch('/api/users', {
           method: 'POST',
@@ -62,7 +77,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         
         const user = await response.json();
         
-        // Now set the avatar
         try {
           const avatarResponse = await fetch(`/api/users/${user.id}/avatar`, {
             method: 'PUT',
@@ -82,7 +96,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         
         return user;
       } else {
-        // Normal user creation flow
         const response = await fetch('/api/users', {
           method: 'POST',
           body: JSON.stringify(userData),
@@ -208,8 +221,8 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         setUsernameError("");
       }
     } catch (error) {
-      // Ignore errors, don't block user
-      console.error('Username check error:', error);
+      setUsernameError("");
+      console.log('Offline mode: skipping username check');
     }
   };
 
