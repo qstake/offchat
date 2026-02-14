@@ -11,7 +11,9 @@ interface WalletContextValue {
   walletAddress: string | null;
   balance: string;
   isConnected: boolean;
+  currentUser: any | null;
   setWalletData: (address: string, walletBalance: string) => void;
+  setCurrentUser: (user: any | null) => void;
   disconnectWallet: () => Promise<void>;
   refreshBalance: () => Promise<void>;
   sendTransaction: (params: { to: string; amount: string; token: string; network: string; }) => Promise<{ success: boolean; txHash?: string; error?: string; }>;
@@ -31,7 +33,30 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const connected = localStorage.getItem('walletConnected') === 'true';
     return !!(saved && connected);
   });
+  const [currentUser, setCurrentUserState] = useState<any | null>(() => {
+    const saved = localStorage.getItem('walletAddress');
+    const connected = localStorage.getItem('walletConnected') === 'true';
+    if (saved && connected) {
+      const cached = localStorage.getItem('offchat_current_user');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.walletAddress === saved) return parsed;
+        } catch (e) {}
+      }
+    }
+    return null;
+  });
   const { toast } = useToast();
+
+  const setCurrentUser = useCallback((user: any | null) => {
+    setCurrentUserState(user);
+    if (user) {
+      localStorage.setItem('offchat_current_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('offchat_current_user');
+    }
+  }, []);
 
   const setWalletData = useCallback((address: string, walletBalance: string) => {
     setWalletAddress(address);
@@ -41,7 +66,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('walletAddress', address);
     localStorage.setItem('walletConnected', 'true');
     
-    console.log('Wallet data set:', { address, walletBalance });
+    console.log('[Offchat] Wallet data set:', { address, walletBalance });
   }, []);
 
   const disconnectWallet = useCallback(async () => {
@@ -50,6 +75,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setWalletAddress(null);
     setBalance("0.00");
     setIsConnected(false);
+    setCurrentUserState(null);
     
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('walletConnected');
@@ -113,7 +139,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       
       if (savedAddress && wasConnected) {
         try {
-          console.log('Wallet found in localStorage, restoring connection:', savedAddress);
+          console.log('[Offchat] Wallet found in localStorage, restoring:', savedAddress);
           setWalletAddress(savedAddress);
           setIsConnected(true);
           
@@ -122,6 +148,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             setBalance(walletBalance);
           } catch (balanceError) {
             console.warn('Could not fetch balance, using default:', balanceError);
+          }
+
+          try {
+            const response = await fetch(`/api/users/wallet/${savedAddress}`);
+            if (response.ok) {
+              const user = await response.json();
+              setCurrentUserState(user);
+              localStorage.setItem('offchat_current_user', JSON.stringify(user));
+              console.log('[Offchat] User refreshed from API:', user.username);
+            }
+          } catch (e) {
+            console.warn('[Offchat] Could not refresh user from API, using cached');
           }
         } catch (error) {
           console.error('Failed to restore wallet connection:', error);
@@ -149,7 +187,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     walletAddress,
     balance,
     isConnected,
+    currentUser,
     setWalletData,
+    setCurrentUser,
     disconnectWallet,
     refreshBalance,
     sendTransaction
