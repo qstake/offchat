@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { 
   getWalletConnectBalance, 
   clearStoredWallet, 
@@ -7,7 +7,19 @@ import {
 } from "@/lib/walletconnect";
 import { useToast } from "@/hooks/use-toast";
 
-export function useWallet() {
+interface WalletContextValue {
+  walletAddress: string | null;
+  balance: string;
+  isConnected: boolean;
+  setWalletData: (address: string, walletBalance: string) => void;
+  disconnectWallet: () => Promise<void>;
+  refreshBalance: () => Promise<void>;
+  sendTransaction: (params: { to: string; amount: string; token: string; network: string; }) => Promise<{ success: boolean; txHash?: string; error?: string; }>;
+}
+
+const WalletContext = createContext<WalletContextValue | null>(null);
+
+export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [walletAddress, setWalletAddress] = useState<string | null>(() => {
     const saved = localStorage.getItem('walletAddress');
     const connected = localStorage.getItem('walletConnected') === 'true';
@@ -26,7 +38,6 @@ export function useWallet() {
     setBalance(walletBalance);
     setIsConnected(true);
     
-    // Store in localStorage for persistence
     localStorage.setItem('walletAddress', address);
     localStorage.setItem('walletConnected', 'true');
     
@@ -34,14 +45,12 @@ export function useWallet() {
   }, []);
 
   const disconnectWallet = useCallback(async () => {
-    // Clear stored wallet data
     clearStoredWallet();
     
     setWalletAddress(null);
     setBalance("0.00");
     setIsConnected(false);
     
-    // Clear localStorage
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('walletConnected');
     
@@ -49,11 +58,6 @@ export function useWallet() {
       title: "Wallet Disconnected",
       description: "Wallet disconnected successfully.",
     });
-    
-    // Refresh page and redirect to create wallet
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
   }, [toast]);
 
   const refreshBalance = useCallback(async () => {
@@ -99,7 +103,6 @@ export function useWallet() {
     }
   }, [toast]);
 
-  // Check for existing wallet connection on mount
   useEffect(() => {
     const checkExistingConnection = async () => {
       const savedAddress = localStorage.getItem('walletAddress');
@@ -126,25 +129,20 @@ export function useWallet() {
     checkExistingConnection();
   }, []);
 
-  // Custom wallet system handles account management
-
-  // Refresh balance periodically and perform wallet maintenance
   useEffect(() => {
     if (isConnected && walletAddress) {
       const interval = setInterval(() => {
         refreshBalance();
-        // Perform wallet maintenance check every time we refresh balance
         performWalletMaintenance();
-      }, 30000); // Every 30 seconds
+      }, 30000);
       
-      // Also perform immediate maintenance check
       performWalletMaintenance();
       
       return () => clearInterval(interval);
     }
   }, [isConnected, walletAddress, refreshBalance]);
 
-  return {
+  const value: WalletContextValue = {
     walletAddress,
     balance,
     isConnected,
@@ -153,4 +151,14 @@ export function useWallet() {
     refreshBalance,
     sendTransaction
   };
+
+  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+}
+
+export function useWallet() {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
 }
