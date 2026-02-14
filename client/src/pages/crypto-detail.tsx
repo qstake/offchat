@@ -611,16 +611,18 @@ export default function CryptoDetailPage() {
             </Card>
 
             {/* Supported Networks */}
-            <div className="mt-2 pb-6">
-              <div className="text-center mb-4">
-                <span className="text-xs font-mono text-green-400/50 tracking-[0.3em]">SUPPORTED NETWORKS</span>
-                <div className="w-16 h-px bg-green-400/20 mx-auto mt-2"></div>
+            <div className="mt-4 pb-6">
+              <div className="text-center mb-5">
+                <span className="text-xs font-mono tracking-[0.3em]" style={{ color: '#00ff00', textShadow: '0 0 8px rgba(0,255,0,0.4)' }}>SUPPORTED NETWORKS</span>
+                <div className="w-20 h-px mx-auto mt-2" style={{ background: 'linear-gradient(90deg, transparent, #00ff00, transparent)' }}></div>
               </div>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {Object.entries(CHAIN_LOGOS).map(([key, chain]) => (
-                  <div key={key} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-white/[0.02] border border-white/5 hover:border-green-500/15 transition-all">
-                    <img src={chain.logo} alt={chain.name} className="w-6 h-6 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                    <span className="text-[9px] font-mono text-green-400/60 tracking-wider">{chain.name}</span>
+                  <div key={key} className="flex flex-col items-center gap-2 p-3 rounded-xl border transition-all hover:scale-105" style={{ background: 'rgba(0,255,0,0.02)', borderColor: 'rgba(0,255,0,0.08)' }}>
+                    <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center" style={{ background: `${chain.color}15`, border: `1px solid ${chain.color}30` }}>
+                      <img src={chain.logo} alt={chain.name} className="w-7 h-7 rounded-full" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider" style={{ color: '#00ff00', textShadow: '0 0 6px rgba(0,255,0,0.3)' }}>{chain.name}</span>
                   </div>
                 ))}
               </div>
