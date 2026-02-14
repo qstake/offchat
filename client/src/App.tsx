@@ -150,7 +150,13 @@ function Router() {
           <AuthPage />
         )}
       </Route>
-      <Route path="/" component={AuthPage} />
+      <Route path="/">
+        {isAuthed ? (
+          <ChatPage currentUser={currentUser} />
+        ) : (
+          <AuthPage />
+        )}
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
