@@ -31,6 +31,7 @@ export class CapacitorBluetoothService {
   private advertising = false;
   private connectedDevices: Map<string, NativeBleDevice> = new Map();
   private callbacks: NativeBleCallbacks;
+  private rescanTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(callbacks: NativeBleCallbacks) {
     this.callbacks = callbacks;
@@ -132,7 +133,10 @@ export class CapacitorBluetoothService {
 
       console.log('BLE scanning started');
 
-      setTimeout(() => this.stopScanning(), 15000);
+      setTimeout(async () => {
+        await this.stopScanning();
+        this.scheduleRescan();
+      }, 15000);
     } catch (error) {
       this.scanning = false;
       console.error('Failed to start BLE scanning:', error);
@@ -151,6 +155,23 @@ export class CapacitorBluetoothService {
     } catch (error) {
       console.error('Failed to stop scanning:', error);
     }
+  }
+
+  private scheduleRescan(): void {
+    if (!this.advertising) return;
+    if (this.rescanTimer) clearTimeout(this.rescanTimer);
+
+    this.rescanTimer = setTimeout(async () => {
+      if (this.advertising && !this.scanning) {
+        console.log('Periodic BLE rescan starting...');
+        try {
+          await this.startScanning();
+        } catch (error) {
+          console.error('Periodic rescan failed:', error);
+          this.scheduleRescan();
+        }
+      }
+    }, 30000);
   }
 
   async connectToDevice(deviceId: string): Promise<void> {
@@ -238,6 +259,10 @@ export class CapacitorBluetoothService {
   }
 
   async disconnectAll(): Promise<void> {
+    if (this.rescanTimer) {
+      clearTimeout(this.rescanTimer);
+      this.rescanTimer = null;
+    }
     for (const deviceId of this.connectedDevices.keys()) {
       await this.disconnectDevice(deviceId);
     }
