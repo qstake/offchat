@@ -144,21 +144,7 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         duration: 1000,
       });
       
-      // Call onComplete for parent state update
       onComplete(user);
-      
-      // Show success message and redirect to chat
-      setTimeout(() => {
-        toast({
-          title: "🎉 " + t('profile.profileCreatedSuccess'),
-          description: t('profile.welcomeToOffchat'),
-          duration: 1000,
-        });
-      }, 500);
-      
-      setTimeout(() => {
-        window.location.href = '/chat';
-      }, 1200);
     },
     onError: (error: any) => {
       toast({
