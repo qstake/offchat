@@ -102,6 +102,23 @@ jobs:
         GRADLE
         fi
 
+    - name: Set app icon from applogo.png
+      run: |
+        LOGO="client/public/applogo.png"
+        if [ -f "$LOGO" ]; then
+          # Copy applogo.png to all mipmap density folders as ic_launcher
+          for dir in android/app/src/main/res/mipmap-*; do
+            if [ -d "$dir" ]; then
+              cp "$LOGO" "$dir/ic_launcher.png"
+              cp "$LOGO" "$dir/ic_launcher_round.png"
+              cp "$LOGO" "$dir/ic_launcher_foreground.png"
+            fi
+          done
+          echo "App icon updated from applogo.png"
+        else
+          echo "applogo.png not found, using default icon"
+        fi
+
     - name: Add Bluetooth permissions to AndroidManifest
       run: |
         sed -i '/<manifest/a \
