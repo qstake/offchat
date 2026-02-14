@@ -148,7 +148,7 @@ export default function WhitepaperPage() {
       
       <div className="relative z-10">
         {/* Back to Home Navigation */}
-        <nav className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md sticky top-0 z-50">
+        <nav className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md sticky top-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="container mx-auto px-4 py-3 flex items-center">
             <a href="/" className="flex items-center gap-2 text-primary hover:text-primary/80 font-mono text-sm transition-colors">
               <ChevronRight className="w-4 h-4 rotate-180" />
