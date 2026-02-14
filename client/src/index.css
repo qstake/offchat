@@ -113,6 +113,10 @@
   
   html {
     scroll-behavior: smooth;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    background-color: #000;
   }
   
   /* Mobile safe area support */
