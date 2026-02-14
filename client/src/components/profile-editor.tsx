@@ -285,7 +285,7 @@ export default function ProfileEditor({ currentUser, onLogout }: ProfileEditorPr
               <span>{isEditing ? t('profile.editProfile') : t('profile.userProfileData')}</span>
             </DialogTitle>
             <p className="text-xs text-primary/60 font-mono mt-1">
-              › {isEditing ? t('profile.modifyParameters') : t('profile.displayInformation')} • MATRIX ID: {currentUser.id.slice(0, 8)}
+              › {isEditing ? t('profile.modifyParameters') : t('profile.displayInformation')} • MATRIX ID: {String(currentUser.id).slice(0, 8)}
             </p>
           </DialogHeader>
 
