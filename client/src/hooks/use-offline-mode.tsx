@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { isNativePlatform } from "@/lib/capacitor-bluetooth";
 
-// Web Bluetooth API type definitions
 declare global {
   interface Navigator {
     bluetooth: Bluetooth;
@@ -41,7 +41,6 @@ declare global {
   }
 }
 
-// Import offline storage after global type declarations
 import { offlineStorage, type OfflineMessage, type OfflineContact } from "@/lib/offline-storage";
 import { BluetoothMessagingService, type BluetoothMessage, type BluetoothPeer } from "@/lib/bluetooth-messaging";
 import { useWallet } from "@/hooks/use-wallet";
@@ -62,6 +61,7 @@ interface OfflineModeContextType {
   getConnectedPeers: () => BluetoothPeer[];
   storageReady: boolean;
   messagingService: BluetoothMessagingService | null;
+  isNativeApp: boolean;
 }
 
 const OfflineModeContext = createContext<OfflineModeContextType | undefined>(undefined);
@@ -77,19 +77,16 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
   const [bluetoothDevice, setBluetoothDevice] = useState<BluetoothDevice | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const [messagingService, setMessagingService] = useState<BluetoothMessagingService | null>(null);
+  const [isNativeApp] = useState(() => isNativePlatform());
   const { toast } = useToast();
   const { currentUser } = useWallet();
 
-  // Initialize storage and check Bluetooth support on mount
   useEffect(() => {
-    // Initialize offline storage
     const initStorage = async () => {
       try {
         await offlineStorage.init();
         setStorageReady(true);
         console.log('Offline storage initialized successfully');
-        
-        // Cleanup old data periodically
         await offlineStorage.cleanup();
       } catch (error) {
         console.error('Failed to initialize offline storage:', error);
@@ -101,8 +98,9 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
       }
     };
 
-    // Check Bluetooth support
-    if ('bluetooth' in navigator) {
+    if (isNativeApp) {
+      setIsBluetoothSupported(true);
+    } else if ('bluetooth' in navigator) {
       setIsBluetoothSupported(true);
     } else {
       setIsBluetoothSupported(false);
@@ -110,13 +108,15 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
 
     initStorage();
-  }, [toast]);
+  }, [toast, isNativeApp]);
 
   const toggleOfflineMode = async () => {
     if (!isOfflineMode && !isBluetoothSupported) {
       toast({
         title: "Bluetooth Not Supported",
-        description: "This browser doesn't support Bluetooth API. Try Chrome or Edge on Android.",
+        description: isNativeApp 
+          ? "Bluetooth is not available on this device." 
+          : "This browser doesn't support Bluetooth API. Try Chrome or Edge on Android.",
         variant: "destructive",
       });
       return;
@@ -142,7 +142,9 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
 
       toast({
         title: "Offline Mode Active",
-        description: "Tap 'Connect Device' to find nearby Offchat users via Bluetooth.",
+        description: isNativeApp
+          ? "Scanning for nearby Offchat users... Devices will auto-connect when found."
+          : "Tap 'Connect Device' to find nearby Offchat users via Bluetooth.",
         variant: "default",
       });
     } else {
@@ -168,13 +170,11 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
   };
 
-  // Handle incoming Bluetooth messages
   const handleBluetoothMessage = async (message: BluetoothMessage, fromPeer: BluetoothPeer) => {
     console.log('Received Bluetooth message:', message, 'from peer:', fromPeer.username || fromPeer.device.id);
     
     try {
       if (message.type === 'chat') {
-        // Store the received message in offline storage
         await offlineStorage.storeOfflineMessage({
           chatId: message.chatId || 'bluetooth-chat',
           senderId: message.senderId,
@@ -189,7 +189,6 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
           variant: "default",
         });
       } else if (message.type === 'discovery') {
-        // Handle peer discovery - update contact information
         if (fromPeer.userId && fromPeer.username) {
           await offlineStorage.storeContact({
             id: fromPeer.userId,
@@ -204,20 +203,26 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
   };
 
-  // Handle peer connection changes
   const handlePeerChange = (peer: BluetoothPeer, event: 'connected' | 'disconnected') => {
     console.log(`Peer ${event}:`, peer.username || peer.device.id);
     
+    const peerName = peer.username || (peer.device as any).name || 'unknown device';
+    
     if (event === 'connected') {
+      setIsBluetoothConnected(true);
       toast({
         title: "Peer Connected",
-        description: `Connected to ${peer.username || peer.device.name || 'unknown device'}`,
+        description: `Connected to ${peerName}`,
         variant: "default",
       });
     } else {
+      const remainingPeers = messagingService?.getConnectedPeers() || [];
+      if (remainingPeers.length === 0) {
+        setIsBluetoothConnected(false);
+      }
       toast({
         title: "Peer Disconnected",
-        description: `Disconnected from ${peer.username || peer.device.name || 'unknown device'}`,
+        description: `Disconnected from ${peerName}`,
         variant: "destructive",
       });
     }
@@ -238,15 +243,16 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
 
     try {
-      // Use messaging service to connect to peer
       const peer = await messagingService.connectToPeer();
       
-      setBluetoothDevice(peer.device);
+      if (!peer.isNative && peer.device) {
+        setBluetoothDevice(peer.device as BluetoothDevice);
+      }
       setIsBluetoothConnected(true);
 
       toast({
         title: "Bluetooth Connected",
-        description: `Connected to ${peer.device.name || 'Unknown Device'}.`,
+        description: `Connected to ${(peer.device as any).name || peer.username || 'Offchat User'}.`,
         variant: "default",
       });
 
@@ -255,9 +261,11 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
       
       let errorMessage = 'Bluetooth connection failed.';
       if (error.name === 'NotFoundError') {
-        errorMessage = 'No Offchat device found. Make sure there is another Offchat user nearby.';
+        errorMessage = 'No Offchat device found. Make sure there is another Offchat user nearby with offline mode enabled.';
       } else if (error.name === 'SecurityError') {
-        errorMessage = 'Bluetooth access denied. Check Bluetooth permissions in browser settings.';
+        errorMessage = 'Bluetooth access denied. Check Bluetooth permissions in settings.';
+      } else if (error.message?.includes('No Offchat devices found')) {
+        errorMessage = error.message;
       }
 
       toast({
@@ -278,7 +286,6 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     setIsBluetoothConnected(false);
   };
 
-  // Offline storage functions
   const storeOfflineMessage = async (message: Omit<OfflineMessage, 'id' | 'timestamp' | 'status' | 'retryCount'>): Promise<string> => {
     if (!storageReady) {
       throw new Error('Storage not ready');
@@ -358,7 +365,6 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
   };
 
-  // Send message via Bluetooth
   const sendBluetoothMessage = async (content: string, chatId: string, messageType = 'text', transactionData?: any): Promise<void> => {
     if (!messagingService || !isOfflineMode) {
       throw new Error('Bluetooth messaging not available');
@@ -385,21 +391,14 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
       };
 
       await messagingService.sendMessage(bluetoothMessage);
-
-      // DO NOT mark as sent immediately - wait for ACK to confirm delivery
-      // The handleBluetoothMessage function will mark it as sent when ACK is received
-      
       console.log('Bluetooth message sent, waiting for ACK confirmation');
     } catch (error) {
       console.error('Failed to send Bluetooth message:', error);
-      
-      // Mark as failed if Bluetooth send failed
       await offlineStorage.markMessageFailed(messageId);
       throw error;
     }
   };
 
-  // Get connected Bluetooth peers
   const getConnectedPeers = (): BluetoothPeer[] => {
     if (!messagingService) {
       return [];
@@ -425,6 +424,7 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
         getConnectedPeers,
         storageReady,
         messagingService,
+        isNativeApp,
       }}
     >
       {children}
