@@ -106,7 +106,7 @@ export default function NFTCollectionPage({ currentUser }: NFTCollectionPageProp
       
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Professional Header - Mobile Optimized */}
-        <header className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-green-400/20 bg-black/80 backdrop-blur-md">
+        <header className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-green-400/20 bg-black/80 backdrop-blur-md" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
           <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
