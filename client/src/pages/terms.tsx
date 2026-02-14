@@ -100,7 +100,7 @@ export default function TermsPage() {
       
       <div className="relative z-10">
         {/* Header */}
-        <header className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md">
+        <header className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="container mx-auto px-4 py-8">
             <div className="flex items-center justify-center space-x-3 mb-4">
               <img 
