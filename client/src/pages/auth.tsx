@@ -11,7 +11,7 @@ import { Wallet, Shield, Users, MessageCircle, Plus, Download, Unlock, Eye, EyeO
 import { useWallet } from "@/hooks/use-wallet";
 import { useToast } from "@/hooks/use-toast";
 import { handleAuthError, handleError, showSuccessMessage } from "@/lib/error-handler";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import AnimatedBackground from "@/components/animated-background";
 import ProfileSetup from "./profile-setup";
 import { generateNewWallet, importWalletFromMnemonic, saveWalletToStorage, loadWalletFromStorage, hasStoredWallet, type CustomWallet } from "@/lib/walletconnect";
@@ -98,50 +98,37 @@ export default function AuthPage() {
   const [shuffledWords, setShuffledWords] = useState<string[]>([]);
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [verificationAttempts, setVerificationAttempts] = useState(0);
-  const { setWalletData } = useWallet();
+  const { setWalletData, setCurrentUser } = useWallet();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
+  const [checkingExistingUser, setCheckingExistingUser] = useState(false);
 
-  // Check if user has stored wallet on mount
   useEffect(() => {
     if (hasStoredWallet()) {
       setCurrentStep('unlock');
     }
   }, []);
 
-  // Check if user exists when wallet is ready
-  const { data: existingUser, isLoading: userLoading, refetch: refetchUser } = useQuery({
-    queryKey: ['/api/users/wallet', currentWallet?.address],
-    queryFn: async () => {
-      if (!currentWallet?.address) return null;
-      const response = await fetch(`/api/users/wallet/${currentWallet.address}`);
-      if (response.status === 404) {
-        return null;
-      }
-      if (!response.ok) throw new Error('Failed to fetch user');
-      const userData = await response.json();
-      return userData;
-    },
-    enabled: !!currentWallet?.address && currentStep === 'profile',
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
-
   useEffect(() => {
-    if (currentStep === 'profile' && currentWallet) {
-      if (userLoading) {
-        return;
-      }
-      
-      if (existingUser) {
-        setWalletData(currentWallet.address, '0.0000');
-        setLocation("/chat");
-      } else {
-        // User will create profile in this same component
-      }
+    if (currentStep === 'profile' && currentWallet && !checkingExistingUser) {
+      setCheckingExistingUser(true);
+      fetch(`/api/users/wallet/${currentWallet.address}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(user => {
+          if (user) {
+            console.log('[Offchat] Existing user found, navigating to chat');
+            setWalletData(currentWallet.address, '0.0000');
+            setCurrentUser(user);
+            setLocation("/chat");
+          }
+          setCheckingExistingUser(false);
+        })
+        .catch(() => {
+          setCheckingExistingUser(false);
+        });
     }
-  }, [currentStep, currentWallet, existingUser, userLoading, setWalletData]);
+  }, [currentStep, currentWallet]);
 
   // Wallet generation functions
   const handleCreateWallet = async () => {
@@ -260,6 +247,7 @@ export default function AuthPage() {
       setIsLoading(true);
       const loadedWallet = loadWalletFromStorage(password);
       if (loadedWallet) {
+        console.log('[Offchat] Wallet unlocked:', loadedWallet.address);
         localStorage.setItem('walletAddress', loadedWallet.address);
         localStorage.setItem('walletConnected', 'true');
         setWalletData(loadedWallet.address, '0.0000');
@@ -272,11 +260,9 @@ export default function AuthPage() {
             const user = JSON.parse(cachedUser);
             if (user.walletAddress === loadedWallet.address) {
               foundUser = user;
-              queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
+              console.log('[Offchat] Found cached user:', user.username);
             }
-          } catch (e) {
-            console.warn('Could not parse cached user:', e);
-          }
+          } catch (e) {}
         }
 
         try {
@@ -284,14 +270,14 @@ export default function AuthPage() {
           if (response.ok) {
             const user = await response.json();
             foundUser = user;
-            queryClient.setQueryData(['/api/users/wallet', loadedWallet.address], user);
-            localStorage.setItem('offchat_current_user', JSON.stringify(user));
+            console.log('[Offchat] Found user from API:', user.username);
           }
         } catch (e) {
-          console.warn('Could not fetch user from API, using cached data:', e);
+          console.warn('[Offchat] API fetch failed, using cached data');
         }
 
         if (foundUser) {
+          setCurrentUser(foundUser);
           setLocation("/chat");
         } else {
           setCurrentWallet(loadedWallet);
@@ -401,11 +387,10 @@ export default function AuthPage() {
   };
 
   const handleProfileComplete = (user: any) => {
-    console.log('Profile completed for user:', user);
+    console.log('[Offchat] Profile completed for user:', user?.username, user?.walletAddress);
     if (currentWallet) {
       setWalletData(currentWallet.address, '0.0000');
-      queryClient.setQueryData(['/api/users/wallet', currentWallet.address], user);
-      localStorage.setItem('offchat_current_user', JSON.stringify(user));
+      setCurrentUser(user);
     }
     toast({
       title: t('auth.registrationComplete'), 
@@ -415,8 +400,7 @@ export default function AuthPage() {
     setLocation("/chat");
   };
 
-  // Profile setup step
-  if (currentStep === 'profile' && currentWallet && !existingUser && !userLoading) {
+  if (currentStep === 'profile' && currentWallet && !checkingExistingUser) {
     return (
       <ProfileSetup 
         walletData={currentWallet} 
