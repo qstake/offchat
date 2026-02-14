@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, DollarSign, BarChart3, ArrowUpDown, Send, X, Users, Loader2, Wallet, Copy, Check } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, RefreshCw, DollarSign, BarChart3, ArrowUpDown, Send, X, Users, Loader2, Wallet, AlertCircle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { cryptoService, type CryptoCurrency, type CryptoPriceHistory } from "@/lib/crypto-service";
 import { useWallet } from "@/hooks/use-wallet";
@@ -39,8 +39,12 @@ export default function CryptoDetailPage() {
   const [sendAmount, setSendAmount] = useState('');
   const [sendAddress, setSendAddress] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
-  const [addressCopied, setAddressCopied] = useState(false);
-  const { walletAddress, currentUser, sendTransaction } = useWallet();
+  const [sendError, setSendError] = useState('');
+  const [friendLoading, setFriendLoading] = useState(false);
+  const { currentUser, sendTransaction } = useWallet();
+
+  const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
+  const isValidAmount = (amt: string) => parseFloat(amt) > 0 && !isNaN(parseFloat(amt));
   
   const coinId = params.coinId;
 
@@ -265,12 +269,12 @@ export default function CryptoDetailPage() {
 
             {/* Send Modal */}
             {showSendOptions && (
-              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); }}>
+              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); setSendError(''); }}>
                 <div className="bg-[#0a0a0a] border border-green-500/15 rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-between p-4 border-b border-green-500/10">
                     <div className="flex items-center gap-2">
                       {sendMode && (
-                        <button onClick={() => { setSendMode(null); setSendAmount(''); setSendAddress(''); }} className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
+                        <button onClick={() => { setSendMode(null); setSendAmount(''); setSendAddress(''); setSendError(''); }} className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
                           <ArrowLeft className="w-3 h-3" />
                         </button>
                       )}
@@ -278,7 +282,7 @@ export default function CryptoDetailPage() {
                         {sendMode === 'friend' ? 'Send to Friend' : sendMode === 'address' ? 'Send to Address' : `Send ${cryptoData?.symbol?.toUpperCase()}`}
                       </h3>
                     </div>
-                    <button onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); }} className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
+                    <button onClick={() => { setShowSendOptions(false); setSendMode(null); setSendAmount(''); setSendAddress(''); setSendError(''); }} className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
@@ -314,23 +318,44 @@ export default function CryptoDetailPage() {
 
                   {sendMode === 'friend' && (
                     <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                      {Array.isArray(friends) && friends.length > 0 ? (
+                      {friendLoading && (
+                        <div className="text-center py-4">
+                          <Loader2 className="w-5 h-5 text-green-400 animate-spin mx-auto" />
+                          <p className="text-xs text-white/40 mt-2">Loading wallet...</p>
+                        </div>
+                      )}
+                      {sendError && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{sendError}</span>
+                        </div>
+                      )}
+                      {!friendLoading && Array.isArray(friends) && friends.length > 0 ? (
                         friends.filter((chat: any) => !chat.isGroup && chat.otherUserId).map((chat: any) => (
                           <button
                             key={chat.id}
-                            onClick={() => {
-                              if (chat.otherUserId) {
-                                fetch(`/api/users/${chat.otherUserId}`)
-                                  .then(r => r.ok ? r.json() : null)
-                                  .then(user => {
-                                    if (user?.walletAddress) {
-                                      setSendAddress(user.walletAddress);
-                                      setSendMode('address');
-                                    }
-                                  });
+                            disabled={friendLoading}
+                            onClick={async () => {
+                              if (!chat.otherUserId) return;
+                              setFriendLoading(true);
+                              setSendError('');
+                              try {
+                                const res = await fetch(`/api/users/${chat.otherUserId}`);
+                                if (!res.ok) throw new Error('Failed to load user');
+                                const user = await res.json();
+                                if (user?.walletAddress && isValidAddress(user.walletAddress)) {
+                                  setSendAddress(user.walletAddress);
+                                  setSendMode('address');
+                                } else {
+                                  setSendError('This contact has no wallet address');
+                                }
+                              } catch {
+                                setSendError('Could not load contact wallet');
+                              } finally {
+                                setFriendLoading(false);
                               }
                             }}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-green-500/5 hover:border-green-500/15 transition-all"
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/8 hover:bg-green-500/5 hover:border-green-500/15 transition-all disabled:opacity-50"
                           >
                             <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center overflow-hidden">
                               {chat.avatar ? (
@@ -348,13 +373,13 @@ export default function CryptoDetailPage() {
                             <Send className="w-4 h-4 text-green-400/50" />
                           </button>
                         ))
-                      ) : (
+                      ) : !friendLoading ? (
                         <div className="text-center py-8">
                           <Users className="w-8 h-8 text-white/20 mx-auto mb-3" />
                           <p className="text-sm text-white/40">No contacts found</p>
                           <p className="text-[11px] text-white/25 mt-1">Start a chat to add contacts</p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   )}
 
@@ -365,23 +390,36 @@ export default function CryptoDetailPage() {
                         <input
                           type="text"
                           value={sendAddress}
-                          onChange={(e) => setSendAddress(e.target.value)}
+                          onChange={(e) => { setSendAddress(e.target.value); setSendError(''); }}
                           placeholder="0x..."
-                          className="w-full bg-black/80 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-green-500/40"
+                          className={`w-full bg-black/80 border rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none ${sendAddress && !isValidAddress(sendAddress) ? 'border-red-500/40 focus:border-red-500/60' : 'border-green-500/20 focus:border-green-500/40'}`}
                         />
+                        {sendAddress && !isValidAddress(sendAddress) && (
+                          <p className="text-[10px] text-red-400 font-mono">Invalid EVM address (must be 0x + 40 hex chars)</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-mono text-green-400/70">Amount ({cryptoData?.symbol?.toUpperCase()})</label>
                         <input
                           type="number"
                           value={sendAmount}
-                          onChange={(e) => setSendAmount(e.target.value)}
+                          onChange={(e) => { setSendAmount(e.target.value); setSendError(''); }}
                           placeholder="0.00"
                           step="any"
-                          className="w-full bg-black/80 border border-green-500/20 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-green-500/40"
+                          min="0"
+                          className={`w-full bg-black/80 border rounded-xl px-4 py-3 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none ${sendAmount && !isValidAmount(sendAmount) ? 'border-red-500/40 focus:border-red-500/60' : 'border-green-500/20 focus:border-green-500/40'}`}
                         />
+                        {sendAmount && !isValidAmount(sendAmount) && (
+                          <p className="text-[10px] text-red-400 font-mono">Amount must be greater than 0</p>
+                        )}
                       </div>
-                      {sendAddress && sendAmount && (
+                      {sendError && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{sendError}</span>
+                        </div>
+                      )}
+                      {isValidAddress(sendAddress) && isValidAmount(sendAmount) && (
                         <div className="bg-white/[0.02] border border-white/8 rounded-xl p-3 space-y-1">
                           <div className="flex justify-between text-[11px]">
                             <span className="text-white/40">To</span>
@@ -395,8 +433,9 @@ export default function CryptoDetailPage() {
                       )}
                       <button
                         onClick={async () => {
-                          if (!sendAddress || !sendAmount || !cryptoData) return;
+                          if (!isValidAddress(sendAddress) || !isValidAmount(sendAmount) || !cryptoData) return;
                           setSendLoading(true);
+                          setSendError('');
                           try {
                             await sendTransaction({
                               to: sendAddress,
@@ -408,13 +447,13 @@ export default function CryptoDetailPage() {
                             setSendMode(null);
                             setSendAmount('');
                             setSendAddress('');
-                          } catch (e) {
-                            console.error('Send failed:', e);
+                          } catch (e: any) {
+                            setSendError(e?.message || 'Transaction failed');
                           } finally {
                             setSendLoading(false);
                           }
                         }}
-                        disabled={!sendAddress || !sendAmount || sendLoading}
+                        disabled={!isValidAddress(sendAddress) || !isValidAmount(sendAmount) || sendLoading}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-green-600/90 to-emerald-600/90 hover:from-green-500 hover:to-emerald-500 text-white font-semibold text-sm border border-green-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {sendLoading ? (
