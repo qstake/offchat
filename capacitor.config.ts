@@ -5,9 +5,19 @@ const config: CapacitorConfig = {
   appName: 'Offchat',
   webDir: 'dist/public',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    iosScheme: 'https',
+    hostname: 'offchat.app',
+    allowNavigation: ['offchat.app', '*.offchat.app']
   },
   plugins: {
+    CapacitorHttp: {
+      enabled: true
+    },
+    StatusBar: {
+      style: 'DARK',
+      overlaysWebView: true
+    },
     BluetoothLe: {
       displayStrings: {
         scanning: 'Searching for Offchat users...',
