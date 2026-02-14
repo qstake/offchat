@@ -55,15 +55,18 @@ jobs:
         export default config;
         EOF
 
-    - name: Add iOS platform
-      run: npx cap add ios
+    - name: Add iOS platform (skip pod install)
+      run: |
+        npx cap add ios || true
+        echo "iOS platform added (pod install will run after fixing deployment target)"
 
     - name: Fix iOS deployment target
       run: |
         PODFILE="ios/App/Podfile"
         if [ -f "$PODFILE" ]; then
           sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" "$PODFILE"
-          echo "iOS deployment target set to 16.0"
+          echo "iOS deployment target set to 16.0 in Podfile"
+          cat "$PODFILE"
         fi
         PROJECT="ios/App/App.xcodeproj/project.pbxproj"
         if [ -f "$PROJECT" ]; then
@@ -73,7 +76,7 @@ jobs:
 
     - name: Run pod install
       working-directory: ios/App
-      run: pod install
+      run: pod install --repo-update
 
     - name: Add Bluetooth usage descriptions to Info.plist
       run: |
