@@ -79,75 +79,112 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
 
       try {
         const { getApiUrl } = await import('@/lib/queryClient');
+        const apiUrl = getApiUrl('/api/users');
+        
+        console.log('[Offchat DEBUG] === PROFILE CREATION START ===');
+        console.log('[Offchat DEBUG] Platform:', navigator.userAgent);
+        console.log('[Offchat DEBUG] Online:', navigator.onLine);
+        console.log('[Offchat DEBUG] API URL:', apiUrl);
+        console.log('[Offchat DEBUG] Window location:', window.location.origin);
+        console.log('[Offchat DEBUG] Has avatar:', !!userData.avatar);
+        console.log('[Offchat DEBUG] Username:', userData.username);
+        console.log('[Offchat DEBUG] Wallet:', userData.walletAddress?.substring(0, 10) + '...');
+        
+        const sendRequest = async (url: string, method: string, body: any) => {
+          console.log(`[Offchat DEBUG] Fetch ${method} ${url}`);
+          console.log('[Offchat DEBUG] Body keys:', Object.keys(body));
+          const startTime = Date.now();
+          try {
+            const response = await fetch(url, {
+              method,
+              body: JSON.stringify(body),
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+            });
+            const elapsed = Date.now() - startTime;
+            console.log(`[Offchat DEBUG] Response: ${response.status} ${response.statusText} (${elapsed}ms)`);
+            console.log('[Offchat DEBUG] Response URL:', response.url);
+            console.log('[Offchat DEBUG] Response type:', response.type);
+            return response;
+          } catch (fetchErr: any) {
+            const elapsed = Date.now() - startTime;
+            console.error(`[Offchat DEBUG] Fetch THREW after ${elapsed}ms:`, fetchErr);
+            console.error('[Offchat DEBUG] Error name:', fetchErr?.name);
+            console.error('[Offchat DEBUG] Error message:', fetchErr?.message);
+            console.error('[Offchat DEBUG] Error type:', typeof fetchErr);
+            console.error('[Offchat DEBUG] Error constructor:', fetchErr?.constructor?.name);
+            console.error('[Offchat DEBUG] Error stack:', fetchErr?.stack);
+            throw fetchErr;
+          }
+        };
         
         if (userData.avatar && (userData.avatar.includes('storage.googleapis.com') || userData.avatar.includes('/objects/'))) {
+          console.log('[Offchat DEBUG] Mode: Create user WITHOUT avatar first, then set avatar');
           const userWithoutAvatar = { ...userData, avatar: null };
-          const response = await fetch(getApiUrl('/api/users'), {
-            method: 'POST',
-            body: JSON.stringify(userWithoutAvatar),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-          });
+          const response = await sendRequest(apiUrl, 'POST', userWithoutAvatar);
           
           if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            if (errData.code === 'USERNAME_TAKEN') {
-              throw new Error(t('profile.usernameTaken'));
-            }
-            if (errData.code === 'WALLET_EXISTS') {
-              throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
-            }
-            throw new Error(errData.message || 'Failed to create user');
+            const errText = await response.text();
+            console.error('[Offchat DEBUG] Create user failed response body:', errText);
+            let errData: any = {};
+            try { errData = JSON.parse(errText); } catch {}
+            if (errData.code === 'USERNAME_TAKEN') throw new Error(t('profile.usernameTaken'));
+            if (errData.code === 'WALLET_EXISTS') throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
+            throw new Error(errData.message || `Failed to create user (HTTP ${response.status})`);
           }
           
           const user = await response.json();
+          console.log('[Offchat DEBUG] User created successfully, id:', user.id);
           
           try {
-            const avatarResponse = await fetch(getApiUrl(`/api/users/${user.id}/avatar`), {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ avatarURL: userData.avatar }),
-              credentials: 'include',
-            });
+            const avatarUrl = getApiUrl(`/api/users/${user.id}/avatar`);
+            console.log('[Offchat DEBUG] Setting avatar at:', avatarUrl);
+            const avatarResponse = await sendRequest(avatarUrl, 'PUT', { avatarURL: userData.avatar });
             
             if (avatarResponse.ok) {
               const { objectPath } = await avatarResponse.json();
               user.avatar = objectPath;
+              console.log('[Offchat DEBUG] Avatar set successfully:', objectPath);
+            } else {
+              console.error('[Offchat DEBUG] Avatar set failed:', avatarResponse.status);
             }
           } catch (error) {
-            console.error('Error setting avatar after user creation:', error);
+            console.error('[Offchat DEBUG] Avatar set error:', error);
           }
           
+          console.log('[Offchat DEBUG] === PROFILE CREATION COMPLETE ===');
           return user;
         } else {
-          const response = await fetch(getApiUrl('/api/users'), {
-            method: 'POST',
-            body: JSON.stringify(userData),
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-          });
+          console.log('[Offchat DEBUG] Mode: Create user with all data');
+          const response = await sendRequest(apiUrl, 'POST', userData);
+          
           if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            if (errData.code === 'USERNAME_TAKEN') {
-              throw new Error(t('profile.usernameTaken'));
-            }
-            if (errData.code === 'WALLET_EXISTS') {
-              throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
-            }
-            throw new Error(errData.message || 'Failed to create user');
+            const errText = await response.text();
+            console.error('[Offchat DEBUG] Create user failed response body:', errText);
+            let errData: any = {};
+            try { errData = JSON.parse(errText); } catch {}
+            if (errData.code === 'USERNAME_TAKEN') throw new Error(t('profile.usernameTaken'));
+            if (errData.code === 'WALLET_EXISTS') throw new Error(t('profile.walletAlreadyRegistered') || 'This wallet is already registered');
+            throw new Error(errData.message || `Failed to create user (HTTP ${response.status})`);
           }
-          return response.json();
+          
+          const result = await response.json();
+          console.log('[Offchat DEBUG] User created successfully, id:', result.id);
+          console.log('[Offchat DEBUG] === PROFILE CREATION COMPLETE ===');
+          return result;
         }
-      } catch (error) {
-        console.error('[Offchat] Profile creation error:', error);
+      } catch (error: any) {
+        console.error('[Offchat DEBUG] === PROFILE CREATION FAILED ===');
+        console.error('[Offchat DEBUG] Error name:', error?.name);
+        console.error('[Offchat DEBUG] Error message:', error?.message);
+        console.error('[Offchat DEBUG] Error type:', typeof error);
+        console.error('[Offchat DEBUG] Error constructor:', error?.constructor?.name);
+        console.error('[Offchat DEBUG] Is TypeError:', error instanceof TypeError);
+        console.error('[Offchat DEBUG] Navigator online:', navigator.onLine);
+        console.error('[Offchat DEBUG] Full error:', error);
+        
         if (isNetworkError(error)) {
-          console.log('[Offchat] Network error detected, saving offline user');
+          console.log('[Offchat DEBUG] >> Network error detected, saving offline user');
           return saveOfflineUser(userData);
         }
         throw error;
@@ -264,9 +301,12 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     if (navigator.onLine) {
       try {
         const { getApiUrl } = await import('@/lib/queryClient');
-        const checkResponse = await fetch(getApiUrl(`/api/users/username/${profileData.username.trim()}`), {
+        const checkUrl = getApiUrl(`/api/users/username/${profileData.username.trim()}`);
+        console.log('[Offchat DEBUG] Username check URL:', checkUrl);
+        const checkResponse = await fetch(checkUrl, {
           credentials: 'include',
         });
+        console.log('[Offchat DEBUG] Username check response:', checkResponse.status);
         if (checkResponse.status === 200) {
           setUsernameError(t('profile.usernameTaken'));
           toast({
@@ -276,8 +316,8 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
           });
           return;
         }
-      } catch (e) {
-        console.log('[Offchat] Username check failed (network issue), proceeding:', e);
+      } catch (e: any) {
+        console.error('[Offchat DEBUG] Username check failed:', e?.name, e?.message, e);
       }
     }
 
