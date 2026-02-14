@@ -4,7 +4,6 @@ function detectCapacitor(): boolean {
   if (typeof window === 'undefined') return false;
   if ((window as any).Capacitor) return true;
   if (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') return true;
-  if (window.location.hostname === 'localhost' && window.location.protocol === 'https:' && !window.location.port) return true;
   return false;
 }
 
@@ -13,11 +12,11 @@ const API_BASE = isCapacitor ? 'https://offchat.app' : '';
 const WS_BASE = isCapacitor ? 'wss://offchat.app' : '';
 
 if (isCapacitor) {
-  console.log('[Offchat] Running in Capacitor mode, API base:', API_BASE);
+  console.log('[Offchat] Running in Capacitor mode, hostname:', window.location.hostname, 'API base:', API_BASE);
 }
 
 export function getApiUrl(path: string): string {
-  if (path.startsWith('/api')) {
+  if (isCapacitor && path.startsWith('/api')) {
     return API_BASE + path;
   }
   return path;
@@ -35,7 +34,11 @@ if (isCapacitor && typeof window !== 'undefined' && window.fetch) {
   const originalFetch = window.fetch.bind(window);
   window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     if (typeof input === 'string' && input.startsWith('/api')) {
-      return originalFetch(API_BASE + input, init);
+      console.log('[Offchat] Intercepting fetch:', input, '->', API_BASE + input);
+      return originalFetch(API_BASE + input, {
+        ...init,
+        credentials: 'include',
+      });
     }
     return originalFetch(input, init);
   } as typeof fetch;
