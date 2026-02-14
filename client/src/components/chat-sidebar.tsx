@@ -67,7 +67,7 @@ export default function ChatSidebar({
   currentUser
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const { isOfflineMode, isBluetoothSupported, isBluetoothConnected, toggleOfflineMode, connectBluetooth } = useOfflineMode();
+  const { isOfflineMode, isBluetoothSupported, isBluetoothConnected, toggleOfflineMode, connectBluetooth, getConnectedPeers } = useOfflineMode();
   const { t } = useTranslation();
   
   // Search users when query is entered
@@ -401,14 +401,7 @@ export default function ChatSidebar({
                     ? 'bg-orange-500/20 border-orange-500/50 hover:bg-orange-500/30 hover:border-orange-500/70 text-orange-400' 
                     : 'bg-black/40 hover:bg-primary/10 hover:border-primary/50 text-primary'
                 }`}
-                onClick={async () => {
-                  if (!isOfflineMode && isBluetoothSupported && !isBluetoothConnected) {
-                    try {
-                      await connectBluetooth();
-                    } catch (error) {
-                      return;
-                    }
-                  }
+                onClick={() => {
                   toggleOfflineMode();
                 }}
                 data-testid="button-offline-mode"
@@ -432,20 +425,48 @@ export default function ChatSidebar({
               </Button>
               
               {isOfflineMode && (
-                <div className="mt-2 px-3 py-2 bg-black/60 rounded-lg border border-orange-500/20">
-                  <div className="flex items-center gap-2 text-xs font-mono">
-                    <div className={`w-2 h-2 rounded-full ${
-                      isBluetoothConnected ? 'bg-green-400 animate-pulse' : 'bg-orange-400 animate-pulse'
-                    }`}></div>
-                    <span className={isBluetoothConnected ? 'text-green-400' : 'text-orange-400'}>
-                      {isBluetoothConnected 
-                        ? 'Bluetooth Connected' 
-                        : isBluetoothSupported 
-                          ? 'Bluetooth Not Connected' 
-                          : 'Bluetooth Not Supported'
-                      }
-                    </span>
+                <div className="mt-2 space-y-2">
+                  <div className="px-3 py-2 bg-black/60 rounded-lg border border-orange-500/20">
+                    <div className="flex items-center gap-2 text-xs font-mono">
+                      <div className={`w-2 h-2 rounded-full ${
+                        isBluetoothConnected ? 'bg-green-400 animate-pulse' : 'bg-orange-400 animate-pulse'
+                      }`}></div>
+                      <span className={isBluetoothConnected ? 'text-green-400' : 'text-orange-400'}>
+                        {isBluetoothConnected 
+                          ? `${getConnectedPeers().length} device${getConnectedPeers().length !== 1 ? 's' : ''} connected`
+                          : 'No devices connected'
+                        }
+                      </span>
+                    </div>
+                    {getConnectedPeers().length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {getConnectedPeers().map((peer, i) => (
+                          <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-green-500/5 border border-green-500/10">
+                            <Bluetooth className="w-3 h-3 text-green-400" />
+                            <span className="text-[11px] font-mono text-green-400 truncate flex-1">
+                              {peer.username || peer.device.name || 'Unknown'}
+                            </span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-xs font-mono bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50"
+                    onClick={async () => {
+                      try {
+                        await connectBluetooth();
+                      } catch (error) {
+                        console.error('Bluetooth connection failed:', error);
+                      }
+                    }}
+                  >
+                    <Bluetooth className="w-3 h-3 mr-2" />
+                    CONNECT DEVICE
+                  </Button>
                 </div>
               )}
             </div>
