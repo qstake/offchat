@@ -106,7 +106,7 @@ jobs:
       run: |
         LOGO="client/public/applogo.png"
         if [ -f "$LOGO" ]; then
-          # Copy applogo.png to all mipmap density folders as ic_launcher
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
           for dir in android/app/src/main/res/mipmap-*; do
             if [ -d "$dir" ]; then
               cp "$LOGO" "$dir/ic_launcher.png"
