@@ -8,8 +8,8 @@ function detectCapacitor(): boolean {
 }
 
 const isCapacitor = detectCapacitor();
-const API_BASE = isCapacitor ? 'https://offchat.app' : '';
-const WS_BASE = isCapacitor ? 'wss://offchat.app' : '';
+const API_BASE = isCapacitor ? 'https://offchat.replit.app' : '';
+const WS_BASE = isCapacitor ? 'wss://offchat.replit.app' : '';
 
 if (isCapacitor) {
   console.log('[Offchat] Running in Capacitor mode, hostname:', window.location.hostname, 'API base:', API_BASE);
