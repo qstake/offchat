@@ -13,6 +13,7 @@ declare global {
   
   interface BluetoothRequestDeviceOptions {
     filters?: BluetoothLEScanFilterInit[];
+    acceptAllDevices?: boolean;
     optionalServices?: BluetoothServiceUUID[];
   }
   
@@ -35,12 +36,15 @@ declare global {
     connected: boolean;
     connect(): Promise<BluetoothRemoteGATTServer>;
     disconnect(): void;
+    getPrimaryService(service: BluetoothServiceUUID): Promise<any>;
+    getPrimaryServices(service?: BluetoothServiceUUID): Promise<any[]>;
   }
 }
 
 // Import offline storage after global type declarations
 import { offlineStorage, type OfflineMessage, type OfflineContact } from "@/lib/offline-storage";
 import { BluetoothMessagingService, type BluetoothMessage, type BluetoothPeer } from "@/lib/bluetooth-messaging";
+import { useWallet } from "@/hooks/use-wallet";
 
 interface OfflineModeContextType {
   isOfflineMode: boolean;
@@ -74,6 +78,7 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
   const [storageReady, setStorageReady] = useState(false);
   const [messagingService, setMessagingService] = useState<BluetoothMessagingService | null>(null);
   const { toast } = useToast();
+  const { currentUser } = useWallet();
 
   // Initialize storage and check Bluetooth support on mount
   useEffect(() => {
@@ -111,25 +116,23 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     if (!isOfflineMode && !isBluetoothSupported) {
       toast({
         title: "Bluetooth Not Supported",
-        description: "This browser doesn't support Bluetooth API. Please use a supported browser for offline messaging.",
+        description: "This browser doesn't support Bluetooth API. Try Chrome or Edge on Android.",
         variant: "destructive",
       });
       return;
     }
 
     if (!isOfflineMode) {
-      // Switching to offline mode
+      const userId = currentUser?.id || `anon-${Date.now()}`;
+      const username = currentUser?.username || currentUser?.displayName || 'Offchat User';
+      
       setIsOfflineMode(true);
       
-      // Initialize messaging service with dummy user data for now
-      // In a real app, this would come from the current user context
-      const newMessagingService = new BluetoothMessagingService('user-123', 'OffchatUser');
+      const newMessagingService = new BluetoothMessagingService(userId, username);
       
-      // Set up message handlers
       newMessagingService.onMessage(handleBluetoothMessage);
       newMessagingService.onPeerChange(handlePeerChange);
       
-      // Start advertising
       try {
         await newMessagingService.startAdvertising();
         setMessagingService(newMessagingService);
@@ -138,15 +141,13 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
       }
 
       toast({
-        title: "Switching to Offline Mode",
-        description: "Enable Bluetooth to connect with nearby Offchat users.",
+        title: "Offline Mode Active",
+        description: "Tap 'Connect Device' to find nearby Offchat users via Bluetooth.",
         variant: "default",
       });
     } else {
-      // Switching back to online mode
       setIsOfflineMode(false);
       
-      // Stop messaging service
       if (messagingService) {
         messagingService.disconnectAll();
         setMessagingService(null);
@@ -156,9 +157,12 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
         disconnectBluetooth();
       }
       
+      setIsBluetoothConnected(false);
+      setBluetoothDevice(null);
+      
       toast({
-        title: "Switched to Online Mode",
-        description: "You can continue messaging over the internet.",
+        title: "Online Mode",
+        description: "Switched back to internet messaging.",
         variant: "default",
       });
     }
@@ -225,7 +229,12 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     }
 
     if (!messagingService) {
-      throw new Error('Messaging service not initialized');
+      toast({
+        title: "Enable Offline Mode First",
+        description: "Turn on offline mode before connecting to devices.",
+        variant: "destructive",
+      });
+      throw new Error('Messaging service not initialized - enable offline mode first');
     }
 
     try {
@@ -355,10 +364,11 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
       throw new Error('Bluetooth messaging not available');
     }
 
-    // First store as pending in offline storage
+    const userId = currentUser?.id || 'unknown';
+    
     const messageId = await offlineStorage.storeOfflineMessage({
       chatId,
-      senderId: 'user-123', // TODO: Would be current user ID in real app
+      senderId: userId,
       content,
       messageType,
       transactionData
@@ -367,7 +377,7 @@ export function OfflineModeProvider({ children }: OfflineModeProviderProps) {
     try {
       const bluetoothMessage: Omit<BluetoothMessage, 'id' | 'timestamp'> = {
         type: 'chat',
-        senderId: 'user-123', // TODO: Use real user ID
+        senderId: userId,
         chatId,
         content,
         messageType,
