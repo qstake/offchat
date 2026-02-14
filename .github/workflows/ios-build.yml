@@ -55,26 +55,34 @@ jobs:
         export default config;
         EOF
 
-    - name: Add iOS platform (skip pod install)
+    - name: Add iOS platform (without pod install)
+      env:
+        CAPACITOR_SKIP_POD_INSTALL: 'true'
       run: |
         npx cap add ios || true
-        echo "iOS platform added (pod install will run after fixing deployment target)"
+        echo "iOS native project created"
 
-    - name: Fix iOS deployment target
+    - name: Fix iOS deployment target in Podfile
       run: |
         PODFILE="ios/App/Podfile"
         if [ -f "$PODFILE" ]; then
           sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" "$PODFILE"
-          echo "iOS deployment target set to 16.0 in Podfile"
+          echo "Podfile updated to iOS 16.0:"
           cat "$PODFILE"
+        else
+          echo "ERROR: Podfile not found!"
+          exit 1
         fi
+
+    - name: Fix iOS deployment target in Xcode project
+      run: |
         PROJECT="ios/App/App.xcodeproj/project.pbxproj"
         if [ -f "$PROJECT" ]; then
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' "$PROJECT"
           echo "Xcode project deployment target set to 16.0"
         fi
 
-    - name: Run pod install
+    - name: Install CocoaPods dependencies
       working-directory: ios/App
       run: pod install --repo-update
 
@@ -115,8 +123,13 @@ jobs:
           echo "applogo.png not found, using default icon"
         fi
 
-    - name: Sync Capacitor
-      run: npx cap sync ios
+    - name: Copy web assets to iOS
+      run: npx cap copy ios
+
+    - name: Update iOS plugins
+      run: |
+        npx cap update ios || true
+        cd ios/App && pod install --repo-update
 
     - name: Install Apple certificate and provisioning profile
       env:
