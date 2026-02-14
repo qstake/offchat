@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Component, ErrorInfo } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useWallet, WalletProvider } from "@/hooks/use-wallet";
@@ -25,6 +25,49 @@ import WhitepaperPage from "./pages/whitepaper";
 import SwapPage from "@/pages/swap";
 import NotFound from "@/pages/not-found";
 
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[Offchat] React Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-black flex items-center justify-center p-4">
+          <div className="text-center max-w-md">
+            <div className="text-green-400 font-mono text-xl mb-4">System Error</div>
+            <p className="text-green-300/70 font-mono text-sm mb-6">
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.href = '/';
+              }}
+              className="bg-black border-2 border-green-400 text-green-400 px-6 py-3 font-mono hover:bg-green-400/10"
+            >
+              Restart App
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function LoadingScreen() {
   const { t } = useTranslation();
   return (
@@ -38,90 +81,10 @@ function LoadingScreen() {
 }
 
 function Router() {
-  const { isConnected, walletAddress } = useWallet();
+  const { isConnected, walletAddress, currentUser } = useWallet();
   const [location, setLocation] = useLocation();
-  
-  // Check if user exists when wallet is connected
-  const { data: currentUser, isLoading: userLoading } = useQuery({
-    queryKey: ['/api/users/wallet', walletAddress],
-    initialData: () => {
-      if (!walletAddress) return undefined;
-      const cached = localStorage.getItem('offchat_current_user');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.walletAddress === walletAddress) return parsed;
-        } catch (e) {}
-      }
-      return undefined;
-    },
-    queryFn: async () => {
-      if (!walletAddress) return null;
 
-      const getLocalUser = () => {
-        const cached = localStorage.getItem('offchat_current_user');
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed.walletAddress === walletAddress) return parsed;
-          } catch (e) {}
-        }
-        const offlineUser = localStorage.getItem('offchat_offline_user');
-        if (offlineUser) {
-          try {
-            const parsed = JSON.parse(offlineUser);
-            if (parsed.walletAddress === walletAddress) return parsed;
-          } catch (e) {}
-        }
-        return null;
-      };
-
-      try {
-        const response = await fetch(`/api/users/wallet/${walletAddress}`);
-        if (response.status === 404) {
-          return getLocalUser();
-        }
-        if (!response.ok) throw new Error('Failed to fetch user');
-        const user = await response.json();
-        localStorage.setItem('offchat_current_user', JSON.stringify(user));
-        const offlineFull = localStorage.getItem('offchat_offline_user_full');
-        if (offlineFull) {
-          localStorage.removeItem('offchat_offline_user');
-          localStorage.removeItem('offchat_offline_user_full');
-        }
-        return user;
-      } catch (error) {
-        return getLocalUser();
-      }
-    },
-    enabled: !!walletAddress && isConnected,
-    retry: false,
-  });
-
-  useEffect(() => {
-    const syncOfflineUser = async () => {
-      const offlineFull = localStorage.getItem('offchat_offline_user_full');
-      if (!offlineFull || !navigator.onLine) return;
-      try {
-        const userData = JSON.parse(offlineFull);
-        const response = await fetch('/api/users', {
-          method: 'POST',
-          body: JSON.stringify(userData),
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (response.ok) {
-          localStorage.removeItem('offchat_offline_user');
-          localStorage.removeItem('offchat_offline_user_full');
-          queryClient.invalidateQueries({ queryKey: ['/api/users/wallet'] });
-        }
-      } catch (e) {
-        console.log('Will sync offline user later');
-      }
-    };
-    window.addEventListener('online', syncOfflineUser);
-    syncOfflineUser();
-    return () => window.removeEventListener('online', syncOfflineUser);
-  }, [walletAddress]);
+  const isAuthed = isConnected && !!currentUser;
 
   return (
     <Switch>
@@ -131,74 +94,58 @@ function Router() {
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/whitepaper" component={WhitepaperPage} />
       <Route path="/chat-conversations">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <ChatConversationsPage currentUser={currentUser} />
-        ) : userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/chat/:chatId?">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <ChatPage currentUser={currentUser} />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/profile/user/:userId">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <UserProfilePage currentUser={currentUser} />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/profile/group/:chatId">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <GroupProfilePage currentUser={currentUser} />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/crypto-market">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <CryptoMarketPage />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/crypto/:coinId">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <CryptoDetailPage />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/offc-transfers">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <OFFCTransfersPage />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
       </Route>
       <Route path="/swap" component={SwapPage} />
       <Route path="/nft-collection">
-        {isConnected && currentUser ? (
+        {isAuthed ? (
           <NFTCollectionPage currentUser={currentUser} />
-        ) : isConnected && userLoading ? (
-          <LoadingScreen />
         ) : (
           <AuthPage />
         )}
@@ -216,10 +163,12 @@ function App() {
         <ThemeProvider>
           <WalletProvider>
             <OfflineModeProvider>
-              <div className="dark">
-                <Toaster />
-                <Router />
-              </div>
+              <ErrorBoundary>
+                <div className="dark">
+                  <Toaster />
+                  <Router />
+                </div>
+              </ErrorBoundary>
             </OfflineModeProvider>
           </WalletProvider>
         </ThemeProvider>
