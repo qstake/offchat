@@ -229,7 +229,7 @@ export default function ChatPage({ currentUser }: ChatPageProps) {
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden">
               {isMobile && (
-                <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl border-b border-green-500/8">
+                <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 bg-gradient-to-b from-black via-black/98 to-black/95 backdrop-blur-xl border-b border-green-500/8" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <img src={offchatLogo} alt="Offchat" className="w-7 h-7 rounded-lg shadow-lg shadow-green-500/10" />
