@@ -163,25 +163,28 @@ jobs:
         echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
         echo "Certificate and provisioning profile installed (UUID: $PP_UUID, Name: $PP_NAME)"
 
-    - name: Configure signing for App target only
+    - name: Configure signing via pbxproj injection
       run: |
         PROJECT="ios/App/App.xcodeproj/project.pbxproj"
-        if [ -f "$PROJECT" ]; then
-          # Set Manual signing for App target
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PROJECT"
-          # Inject provisioning profile and team into all build configurations
-          sed -i '' "s/DEVELOPMENT_TEAM = \"\";/DEVELOPMENT_TEAM = \"${{ secrets.IOS_TEAM_ID }}\";/g" "$PROJECT"
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" "$PROJECT"
-          sed -i '' "s/CODE_SIGN_IDENTITY = \"\";/CODE_SIGN_IDENTITY = \"Apple Distribution\";/g" "$PROJECT"
-          echo "Signing configured: Team=${{ secrets.IOS_TEAM_ID }}, Profile=$PP_NAME"
-        fi
-        # Ensure Pods targets use automatic signing (no provisioning profile)
-        PODS_PROJECT="ios/App/Pods/Pods.xcodeproj/project.pbxproj"
-        if [ -f "$PODS_PROJECT" ]; then
-          sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' "$PODS_PROJECT"
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = ".*";/PROVISIONING_PROFILE_SPECIFIER = "";/g' "$PODS_PROJECT"
-          echo "Pods targets set to Automatic signing"
-        fi
+        
+        # Use Ruby to properly inject signing settings into the App target build configs
+        ruby << 'RUBY'
+        content = File.read("ios/App/App.xcodeproj/project.pbxproj")
+        
+        team_id = ENV['IOS_TEAM_ID'] || '${{ secrets.IOS_TEAM_ID }}'
+        pp_name = ENV['PP_NAME'] || ''
+        
+        # Replace all buildSettings blocks that contain INFOPLIST_FILE (only App target has this)
+        # This ensures we only modify App target, not Pods
+        content.gsub!(/INFOPLIST_FILE = "App\/Info\.plist";/) do |match|
+          "#{match}\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = \"${{ secrets.IOS_TEAM_ID }}\";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"#{pp_name}\";"
+        end
+        
+        File.write("ios/App/App.xcodeproj/project.pbxproj", content)
+        puts "Signing injected into App target build settings"
+        RUBY
+        
+        echo "Signing configured for App target"
 
     - name: Build iOS archive
       run: |
