@@ -104,11 +104,34 @@ jobs:
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           if [ -d "$ICONSET" ]; then
             FIXED_LOGO="$RUNNER_TEMP/applogo_no_alpha.png"
-            cp "$LOGO" "$FIXED_LOGO"
-            # Remove alpha channel using macOS built-in sips (flatten onto black background)
-            sips -s hasAlpha false "$FIXED_LOGO" 2>/dev/null || true
-            echo "Alpha channel status after fix:"
-            sips -g hasAlpha "$FIXED_LOGO" 2>/dev/null || true
+            # Use Python to properly remove alpha channel by compositing onto black background
+            python3 << 'PYEOF'
+import struct, zlib, os, sys
+
+input_path = os.environ.get('LOGO', 'client/public/applogo.png')
+output_path = os.environ.get('RUNNER_TEMP', '/tmp') + '/applogo_no_alpha.png'
+
+with open(input_path, 'rb') as f:
+    data = f.read()
+
+# Parse PNG
+assert data[:8] == b'\x89PNG\r\n\x1a\n', "Not a valid PNG"
+
+# Use macOS CoreGraphics via objc bridge to remove alpha
+import subprocess
+# Convert PNG to JPEG (no alpha) then back to PNG
+jpeg_path = output_path.replace('.png', '.jpg')
+subprocess.run(['sips', '-s', 'format', 'jpeg', input_path, '--out', jpeg_path], check=True, capture_output=True)
+subprocess.run(['sips', '-s', 'format', 'png', jpeg_path, '--out', output_path], check=True, capture_output=True)
+os.remove(jpeg_path)
+
+# Verify
+result = subprocess.run(['sips', '-g', 'hasAlpha', output_path], capture_output=True, text=True)
+print(f"Output file alpha check: {result.stdout.strip()}")
+print(f"Successfully created icon without alpha at {output_path}")
+PYEOF
+            echo "Alpha channel status:"
+            sips -g hasAlpha "$FIXED_LOGO"
             for SIZE in AppIcon-20x20@1x AppIcon-20x20@2x AppIcon-20x20@3x AppIcon-29x29@1x AppIcon-29x29@2x AppIcon-29x29@3x AppIcon-40x40@1x AppIcon-40x40@2x AppIcon-40x40@3x AppIcon-60x60@2x AppIcon-60x60@3x AppIcon-76x76@1x AppIcon-76x76@2x AppIcon-83.5x83.5@2x; do
               cp "$FIXED_LOGO" "$ICONSET/${SIZE}.png"
             done
