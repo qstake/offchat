@@ -239,7 +239,7 @@ export default function ChatSidebar({
       <div className="relative z-10 h-full flex flex-col">
         
         {/* Header - Logo + Close (mobile) */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-primary/15" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
           <div 
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => {
