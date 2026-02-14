@@ -48,7 +48,9 @@ jobs:
           appName: 'Offchat',
           webDir: 'dist/public',
           server: {
-            androidScheme: 'https'
+            androidScheme: 'https',
+            url: 'https://offchat.app',
+            cleartext: false
           }
         };
         export default config;
