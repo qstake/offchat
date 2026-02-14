@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getWebSocketUrl } from "@/lib/queryClient";
 import type { Message } from "@shared/schema";
 
 interface WebSocketMessage {
@@ -30,19 +31,6 @@ export function useWebSocket(chatId: string | null, userId: string) {
     setConnectionStatus('connecting');
     
     try {
-      // Construct WebSocket URL - RELATIVE FOR REPLIT  
-      const getWebSocketUrl = (): string => {
-        // Use current window URL as base and just change protocol
-        const currentUrl = new URL(window.location.href);
-        const wsUrl = `${currentUrl.protocol === 'https:' ? 'wss:' : 'ws:'}//${currentUrl.host}/ws`;
-        
-        console.log('🔗 WebSocket URL (relative):', wsUrl, {
-          location: window.location.href,
-          currentHost: currentUrl.host
-        });
-        return wsUrl;
-      };
-      
       const wsUrl = getWebSocketUrl();
       
       // Log the WebSocket URL for debugging
