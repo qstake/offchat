@@ -163,28 +163,54 @@ jobs:
         echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
         echo "Certificate and provisioning profile installed (UUID: $PP_UUID, Name: $PP_NAME)"
 
-    - name: Configure signing via pbxproj injection
+    - name: Configure signing for App target
       run: |
+        # Create xcconfig with signing settings
+        cat > ios/App/Release.xcconfig << XCCONFIG
+        CODE_SIGN_STYLE = Manual
+        CODE_SIGN_IDENTITY = Apple Distribution
+        DEVELOPMENT_TEAM = ${{ secrets.IOS_TEAM_ID }}
+        PROVISIONING_PROFILE_SPECIFIER = ${PP_NAME}
+        XCCONFIG
+
+        echo "Created Release.xcconfig with signing settings"
+        cat ios/App/Release.xcconfig
+
+        # Also directly patch project.pbxproj to add DEVELOPMENT_TEAM
         PROJECT="ios/App/App.xcodeproj/project.pbxproj"
-        
-        # Use Ruby to properly inject signing settings into the App target build configs
-        ruby << 'RUBY'
-        content = File.read("ios/App/App.xcodeproj/project.pbxproj")
-        
-        team_id = ENV['IOS_TEAM_ID'] || '${{ secrets.IOS_TEAM_ID }}'
-        pp_name = ENV['PP_NAME'] || ''
-        
-        # Replace all buildSettings blocks that contain INFOPLIST_FILE (only App target has this)
-        # This ensures we only modify App target, not Pods
-        content.gsub!(/INFOPLIST_FILE = "App\/Info\.plist";/) do |match|
-          "#{match}\n\t\t\t\tCODE_SIGN_IDENTITY = \"Apple Distribution\";\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = \"${{ secrets.IOS_TEAM_ID }}\";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"#{pp_name}\";"
-        end
-        
-        File.write("ios/App/App.xcodeproj/project.pbxproj", content)
-        puts "Signing injected into App target build settings"
-        RUBY
-        
-        echo "Signing configured for App target"
+        # Add DEVELOPMENT_TEAM to every buildSettings that has ASSETCATALOG (App target only)
+        python3 << 'PYEOF'
+import re
+
+with open("ios/App/App.xcodeproj/project.pbxproj", "r") as f:
+    content = f.read()
+
+team_id = "${{ secrets.IOS_TEAM_ID }}"
+
+# Find all buildSettings blocks and add signing to ones that contain PRODUCT_BUNDLE_IDENTIFIER
+# which is unique to the App target
+pattern = r'(buildSettings = \{[^}]*PRODUCT_BUNDLE_IDENTIFIER = app\.offchat\.messenger;)'
+replacement = lambda m: m.group(0).rstrip(';') + ';\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = "' + team_id + '";\n\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution"'
+
+content_new = re.sub(pattern, replacement, content, flags=re.DOTALL)
+
+if content_new != content:
+    print("Successfully injected signing into App target")
+else:
+    print("Pattern not found, trying alternative approach")
+    # Alternative: just add DEVELOPMENT_TEAM everywhere it says PRODUCT_BUNDLE_IDENTIFIER
+    content_new = content.replace(
+        'PRODUCT_BUNDLE_IDENTIFIER = app.offchat.messenger;',
+        'PRODUCT_BUNDLE_IDENTIFIER = app.offchat.messenger;\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = "' + team_id + '";\n\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";'
+    )
+    if content_new != content:
+        print("Alternative injection succeeded")
+    else:
+        print("WARNING: Could not inject signing settings")
+
+with open("ios/App/App.xcodeproj/project.pbxproj", "w") as f:
+    f.write(content_new)
+PYEOF
 
     - name: Build iOS archive
       run: |
@@ -195,6 +221,7 @@ jobs:
           -archivePath $RUNNER_TEMP/Offchat.xcarchive \
           archive \
           -destination "generic/platform=iOS" \
+          -xcconfig ios/App/Release.xcconfig \
           -allowProvisioningUpdates \
           ONLY_ACTIVE_ARCH=NO
 
