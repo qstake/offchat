@@ -97,16 +97,22 @@ jobs:
         /usr/libexec/PlistBuddy -c "Add :NSBluetoothPeripheralUsageDescription string 'Offchat uses Bluetooth to communicate with nearby devices'" "$PLIST" 2>/dev/null || true
         /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 'Offchat uses local network to discover nearby users'" "$PLIST" 2>/dev/null || true
 
-    - name: Set app icon
+    - name: Set app icon (remove alpha channel for App Store)
       run: |
         LOGO="client/public/applogo.png"
         if [ -f "$LOGO" ]; then
           ICONSET="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           if [ -d "$ICONSET" ]; then
+            FIXED_LOGO="$RUNNER_TEMP/applogo_no_alpha.png"
+            cp "$LOGO" "$FIXED_LOGO"
+            # Remove alpha channel using macOS built-in sips (flatten onto black background)
+            sips -s hasAlpha false "$FIXED_LOGO" 2>/dev/null || true
+            echo "Alpha channel status after fix:"
+            sips -g hasAlpha "$FIXED_LOGO" 2>/dev/null || true
             for SIZE in AppIcon-20x20@1x AppIcon-20x20@2x AppIcon-20x20@3x AppIcon-29x29@1x AppIcon-29x29@2x AppIcon-29x29@3x AppIcon-40x40@1x AppIcon-40x40@2x AppIcon-40x40@3x AppIcon-60x60@2x AppIcon-60x60@3x AppIcon-76x76@1x AppIcon-76x76@2x AppIcon-83.5x83.5@2x; do
-              cp "$LOGO" "$ICONSET/${SIZE}.png"
+              cp "$FIXED_LOGO" "$ICONSET/${SIZE}.png"
             done
-            cp "$LOGO" "$ICONSET/AppIcon-512@2x.png" 2>/dev/null || true
+            cp "$FIXED_LOGO" "$ICONSET/AppIcon-512@2x.png" 2>/dev/null || true
           fi
         fi
 
