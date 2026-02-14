@@ -136,7 +136,7 @@ export default function AuthPage() {
       
       if (existingUser) {
         setWalletData(currentWallet.address, '0.0000');
-        window.location.href = "/chat";
+        setLocation("/chat");
       } else {
         // User will create profile in this same component
       }
@@ -262,7 +262,8 @@ export default function AuthPage() {
       if (loadedWallet) {
         localStorage.setItem('walletAddress', loadedWallet.address);
         localStorage.setItem('walletConnected', 'true');
-        window.location.href = "/chat";
+        setWalletData(loadedWallet.address, '0.0000');
+        setLocation("/chat");
         return;
       }
     } catch (error: any) {
@@ -370,18 +371,14 @@ export default function AuthPage() {
     console.log('Profile completed for user:', user);
     if (currentWallet) {
       setWalletData(currentWallet.address, '0.0000');
-      // Invalidate user queries so App.tsx router can see the new user
-      queryClient.invalidateQueries({ queryKey: ['/api/users/wallet', currentWallet.address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/users/wallet'] });
+      queryClient.setQueryData(['/api/users/wallet', currentWallet.address], user);
     }
     toast({
       title: t('auth.registrationComplete'), 
       description: t('auth.welcomeToMatrix'),
     });
     
-    setTimeout(() => {
-      window.location.href = "/chat";
-    }, 100);
+    setLocation("/chat");
   };
 
   // Profile setup step
