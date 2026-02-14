@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist/public',
   server: {
     androidScheme: 'https',
-    allowNavigation: ['offchat.app', '*.offchat.app']
+    allowNavigation: ['offchat.app', '*.offchat.app', 'offchat.replit.app']
   },
   plugins: {
     CapacitorHttp: {
