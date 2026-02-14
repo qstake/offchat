@@ -156,10 +156,8 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         });
       }, 500);
       
-      // Redirect to chat with force reload
       setTimeout(() => {
-        window.location.href = '/chat';
-        window.location.reload();
+        setLocation('/chat');
       }, 1200);
     },
     onError: (error: any) => {
