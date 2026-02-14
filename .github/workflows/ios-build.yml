@@ -31,83 +31,32 @@ jobs:
     - name: Create Capacitor config
       run: |
         rm -f capacitor.config.ts capacitor.config.json
-        cat > capacitor.config.json << 'CAPEOF'
-        {
-          "appId": "app.offchat.messenger",
-          "appName": "Offchat",
-          "webDir": "dist/public",
-          "server": { "iosScheme": "https" },
-          "plugins": {
-            "BluetoothLe": {
-              "displayStrings": {
-                "scanning": "Searching for Offchat users...",
-                "cancel": "Cancel",
-                "availableDevices": "Nearby Offchat Users",
-                "noDeviceFound": "No Offchat users found nearby"
-              }
-            }
-          }
-        }
-        CAPEOF
+        echo '{"appId":"app.offchat.messenger","appName":"Offchat","webDir":"dist/public","server":{"iosScheme":"https"},"plugins":{"BluetoothLe":{"displayStrings":{"scanning":"Searching for Offchat users...","cancel":"Cancel","availableDevices":"Nearby Offchat Users","noDeviceFound":"No Offchat users found nearby"}}}}' > capacitor.config.json
 
     - name: Add iOS platform
       run: npx cap add ios 2>&1 || true
 
-    - name: Fix deployment target and patch Podfile
+    - name: Fix Podfile deployment target
+      run: sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" ios/App/Podfile
+
+    - name: Add post_install hook to Podfile
       run: |
-        # 1. Fix deployment target in Podfile (keep Capacitor's auto-generated pods)
-        sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" ios/App/Podfile
-
-        # 2. Add post_install hook to disable code signing for Pods
-        # Check if post_install already exists
-        if grep -q "post_install" ios/App/Podfile; then
-          echo "post_install already exists in Podfile, patching it"
-          # Replace existing post_install block
-          python3 << 'PYEOF'
-        import re
-        with open("ios/App/Podfile", "r") as f:
-            content = f.read()
-        # Remove existing post_install block
-        content = re.sub(r'post_install do \|installer\|.*?end\n', '', content, flags=re.DOTALL)
-        # Add new post_install
-        content += """
-post_install do |installer|
-  assertDeploymentTarget(installer)
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-    end
-  end
-end
-"""
-        with open("ios/App/Podfile", "w") as f:
-            f.write(content)
-        PYEOF
-        else
-          echo "Adding post_install hook to Podfile"
-          cat >> ios/App/Podfile << 'HOOKEOF'
-
-post_install do |installer|
-  assertDeploymentTarget(installer)
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-    end
-  end
-end
-HOOKEOF
-        fi
-
-        # 3. Fix deployment target in Xcode project
-        sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' ios/App/App.xcodeproj/project.pbxproj
-
-        echo "=== Final Podfile ==="
+        echo "" >> ios/App/Podfile
+        echo "post_install do |installer|" >> ios/App/Podfile
+        echo "  assertDeploymentTarget(installer)" >> ios/App/Podfile
+        echo "  installer.pods_project.targets.each do |target|" >> ios/App/Podfile
+        echo "    target.build_configurations.each do |config|" >> ios/App/Podfile
+        echo "      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'" >> ios/App/Podfile
+        echo "      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'" >> ios/App/Podfile
+        echo "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'" >> ios/App/Podfile
+        echo "    end" >> ios/App/Podfile
+        echo "  end" >> ios/App/Podfile
+        echo "end" >> ios/App/Podfile
+        echo "Podfile updated:"
         cat ios/App/Podfile
-        echo "=== Deployment target fixed to 16.0 ==="
+
+    - name: Fix Xcode project deployment target
+      run: sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' ios/App/App.xcodeproj/project.pbxproj
 
     - name: Install CocoaPods
       working-directory: ios/App
@@ -146,32 +95,22 @@ HOOKEOF
         PP_PATH=$RUNNER_TEMP/profile.mobileprovision
         KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
         KC_PASSWORD="actions-keychain-password"
-
         echo -n "$P12_BASE64" | base64 --decode -o "$CERT_PATH"
         echo -n "$PP_BASE64" | base64 --decode -o "$PP_PATH"
-
         security create-keychain -p "$KC_PASSWORD" "$KEYCHAIN_PATH"
         security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
         security unlock-keychain -p "$KC_PASSWORD" "$KEYCHAIN_PATH"
         security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
         security set-key-partition-list -S apple-tool:,apple: -k "$KC_PASSWORD" "$KEYCHAIN_PATH"
         security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-
-        # Extract UUID and Name using PlistBuddy (most reliable method)
+        mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
         PLIST_XML=$(security cms -D -i "$PP_PATH")
         PP_UUID=$(echo "$PLIST_XML" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
         PP_NAME=$(echo "$PLIST_XML" | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
-
-        cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"${PP_UUID}.mobileprovision"
-
+        cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/${PP_UUID}.mobileprovision"
         echo "PP_UUID=$PP_UUID" >> $GITHUB_ENV
         echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
-
-        echo "Installed certificate and provisioning profile:"
-        echo "  Profile Name: $PP_NAME"
-        echo "  Profile UUID: $PP_UUID"
+        echo "Profile installed - Name: $PP_NAME, UUID: $PP_UUID"
         security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
     - name: Build iOS archive
@@ -180,45 +119,42 @@ HOOKEOF
           -scheme App \
           -sdk iphoneos \
           -configuration Release \
-          -archivePath $RUNNER_TEMP/Offchat.xcarchive \
+          -archivePath "$RUNNER_TEMP/Offchat.xcarchive" \
           -destination "generic/platform=iOS" \
           clean archive \
           ONLY_ACTIVE_ARCH=NO \
           CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM="${{ secrets.IOS_TEAM_ID }}" \
-          CODE_SIGN_IDENTITY="Apple Distribution" \
-          PROVISIONING_PROFILE="$PP_UUID"
+          "DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }}" \
+          "CODE_SIGN_IDENTITY=Apple Distribution" \
+          "PROVISIONING_PROFILE=$PP_UUID"
 
     - name: Export IPA
       run: |
-        cat > $RUNNER_TEMP/ExportOptions.plist << PLIST
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-          <key>method</key>
-          <string>ad-hoc</string>
-          <key>teamID</key>
-          <string>${{ secrets.IOS_TEAM_ID }}</string>
-          <key>signingStyle</key>
-          <string>manual</string>
-          <key>provisioningProfiles</key>
-          <dict>
-            <key>app.offchat.messenger</key>
-            <string>${PP_NAME}</string>
-          </dict>
-          <key>compileBitcode</key>
-          <false/>
-          <key>stripSwiftSymbols</key>
-          <true/>
-        </dict>
-        </plist>
-        PLIST
-
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > "$RUNNER_TEMP/ExportOptions.plist"
+        echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '<plist version="1.0">' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '<dict>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>method</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <string>ad-hoc</string>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>teamID</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo "  <string>${{ secrets.IOS_TEAM_ID }}</string>" >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>signingStyle</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <string>manual</string>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>provisioningProfiles</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <dict>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '    <key>app.offchat.messenger</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo "    <string>${PP_NAME}</string>" >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  </dict>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>compileBitcode</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <false/>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <key>stripSwiftSymbols</key>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '  <true/>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '</dict>' >> "$RUNNER_TEMP/ExportOptions.plist"
+        echo '</plist>' >> "$RUNNER_TEMP/ExportOptions.plist"
         xcodebuild -exportArchive \
-          -archivePath $RUNNER_TEMP/Offchat.xcarchive \
-          -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
-          -exportPath $RUNNER_TEMP/export \
+          -archivePath "$RUNNER_TEMP/Offchat.xcarchive" \
+          -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+          -exportPath "$RUNNER_TEMP/export" \
           -allowProvisioningUpdates
 
     - name: Upload IPA
@@ -232,4 +168,4 @@ HOOKEOF
       if: always()
       run: |
         security default-keychain -s login.keychain-db 2>/dev/null || true
-        security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+        security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
