@@ -152,16 +152,21 @@ jobs:
     - name: Register BLE Advertiser plugin in MainActivity
       run: |
         MAIN_ACTIVITY="android/app/src/main/java/app/offchat/messenger/MainActivity.java"
-        if [ -f "$MAIN_ACTIVITY" ]; then
-          sed -i 's/import com.getcapacitor.BridgeActivity;/import com.getcapacitor.BridgeActivity;\nimport app.offchat.messenger.plugins.BleAdvertiserPlugin;/' "$MAIN_ACTIVITY"
-          
-          if grep -q "onCreate" "$MAIN_ACTIVITY"; then
-            sed -i '/super.onCreate/a\        registerPlugin(BleAdvertiserPlugin.class);' "$MAIN_ACTIVITY"
-          else
-            sed -i '/public class MainActivity/a\    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(BleAdvertiserPlugin.class);\n        super.onCreate(savedInstanceState);\n    }' "$MAIN_ACTIVITY"
-          fi
-          echo "BLE Advertiser plugin registered in MainActivity"
-        fi
+        cat > "$MAIN_ACTIVITY" << 'JAVA'
+        package app.offchat.messenger;
+
+        import com.getcapacitor.BridgeActivity;
+        import app.offchat.messenger.plugins.BleAdvertiserPlugin;
+
+        public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(android.os.Bundle savedInstanceState) {
+                registerPlugin(BleAdvertiserPlugin.class);
+                super.onCreate(savedInstanceState);
+            }
+        }
+        JAVA
+        echo "MainActivity.java written with BLE Advertiser plugin"
 
     - name: Sync Capacitor
       run: npx cap sync android
