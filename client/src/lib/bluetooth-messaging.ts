@@ -1,6 +1,5 @@
-// Bluetooth messaging interface for peer-to-peer communication
+import { isNativePlatform, CapacitorBluetoothService, type NativeBleDevice } from './capacitor-bluetooth';
 
-// Extended Web Bluetooth API type definitions
 declare global {
   interface BluetoothRemoteGATTServer {
     device: BluetoothDevice;
@@ -44,7 +43,6 @@ declare global {
   }
 }
 
-// Offchat Bluetooth Service UUID
 export const OFFCHAT_SERVICE_UUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
 export const OFFCHAT_MESSAGE_CHARACTERISTIC_UUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
 export const OFFCHAT_DISCOVERY_CHARACTERISTIC_UUID = '19b10002-e8f2-537e-4f6c-d104768a1214';
@@ -59,7 +57,7 @@ interface BluetoothMessage {
   timestamp: number;
   messageType?: string;
   transactionData?: any;
-  signature?: string; // For future security implementation
+  signature?: string;
 }
 
 interface DiscoveryMessage {
@@ -69,22 +67,23 @@ interface DiscoveryMessage {
   username: string;
   avatar?: string;
   timestamp: number;
-  publicKey?: string; // For future encryption
+  publicKey?: string;
 }
 
 interface BluetoothPeer {
-  device: BluetoothDevice;
-  server: BluetoothRemoteGATTServer;
-  messageCharacteristic: BluetoothRemoteGATTCharacteristic;
-  discoveryCharacteristic: BluetoothRemoteGATTCharacteristic;
+  device: BluetoothDevice | { id: string; name?: string };
+  server: BluetoothRemoteGATTServer | null;
+  messageCharacteristic: BluetoothRemoteGATTCharacteristic | null;
+  discoveryCharacteristic: BluetoothRemoteGATTCharacteristic | null;
   userId?: string;
   username?: string;
   lastSeen: number;
-  // Message reassembly buffers
   messageBuffer: Uint8Array;
   expectedLength: number;
   discoveryBuffer: Uint8Array;
   discoveryExpectedLength: number;
+  isNative?: boolean;
+  nativeDeviceId?: string;
 }
 
 type MessageHandler = (message: BluetoothMessage, fromPeer: BluetoothPeer) => void;
@@ -97,13 +96,142 @@ export class BluetoothMessagingService {
   private isAdvertising = false;
   private currentUserId: string = '';
   private currentUsername: string = '';
+  private nativeService: CapacitorBluetoothService | null = null;
+  private discoveredNativeDevices: Map<string, NativeBleDevice> = new Map();
+  private autoConnectEnabled = true;
 
   constructor(userId: string, username: string) {
     this.currentUserId = userId;
     this.currentUsername = username;
+
+    if (isNativePlatform()) {
+      this.initNativeService();
+    }
   }
 
-  // Add event handlers
+  private initNativeService(): void {
+    this.nativeService = new CapacitorBluetoothService({
+      onDeviceFound: (device) => this.handleNativeDeviceFound(device),
+      onMessageReceived: (deviceId, data) => this.handleNativeMessage(deviceId, data),
+      onDiscoveryReceived: (deviceId, data) => this.handleNativeDiscovery(deviceId, data),
+      onDeviceDisconnected: (deviceId) => this.handleNativeDisconnect(deviceId)
+    });
+  }
+
+  private async handleNativeDeviceFound(device: NativeBleDevice): Promise<void> {
+    if (this.discoveredNativeDevices.has(device.deviceId)) return;
+    if (this.peers.has(device.deviceId)) return;
+
+    this.discoveredNativeDevices.set(device.deviceId, device);
+    console.log(`Native BLE: Found Offchat device: ${device.name || device.deviceId}`);
+
+    if (this.autoConnectEnabled) {
+      try {
+        await this.connectToNativeDevice(device.deviceId);
+      } catch (error) {
+        console.error('Auto-connect failed:', error);
+      }
+    }
+  }
+
+  private async connectToNativeDevice(deviceId: string): Promise<void> {
+    if (!this.nativeService) return;
+
+    try {
+      await this.nativeService.connectToDevice(deviceId);
+
+      const device = this.discoveredNativeDevices.get(deviceId);
+      const peer: BluetoothPeer = {
+        device: { id: deviceId, name: device?.name },
+        server: null,
+        messageCharacteristic: null,
+        discoveryCharacteristic: null,
+        lastSeen: Date.now(),
+        messageBuffer: new Uint8Array(0),
+        expectedLength: 0,
+        discoveryBuffer: new Uint8Array(0),
+        discoveryExpectedLength: 0,
+        isNative: true,
+        nativeDeviceId: deviceId
+      };
+
+      this.peers.set(deviceId, peer);
+      this.peerHandlers.forEach(handler => handler(peer, 'connected'));
+
+      const discoveryData = JSON.stringify({
+        id: crypto.randomUUID(),
+        type: 'discovery',
+        userId: this.currentUserId,
+        username: this.currentUsername,
+        timestamp: Date.now()
+      });
+      await this.nativeService.sendDiscovery(deviceId, discoveryData);
+
+      console.log(`Native BLE: Connected to ${device?.name || deviceId}`);
+    } catch (error) {
+      console.error(`Native BLE: Failed to connect to ${deviceId}:`, error);
+      throw error;
+    }
+  }
+
+  private handleNativeMessage(deviceId: string, data: string): void {
+    try {
+      const message: BluetoothMessage = JSON.parse(data);
+      const peer = this.peers.get(deviceId);
+      if (peer) {
+        peer.lastSeen = Date.now();
+        this.messageHandlers.forEach(handler => handler(message, peer));
+
+        if (message.type === 'chat') {
+          this.sendNativeAcknowledgment(deviceId, message.id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to parse native BLE message:', error);
+    }
+  }
+
+  private handleNativeDiscovery(deviceId: string, data: string): void {
+    try {
+      const discoveryMessage: DiscoveryMessage = JSON.parse(data);
+      const peer = this.peers.get(deviceId);
+      if (peer) {
+        peer.userId = discoveryMessage.userId;
+        peer.username = discoveryMessage.username;
+        peer.lastSeen = Date.now();
+        console.log(`Native BLE: Discovered peer: ${discoveryMessage.username}`);
+      }
+    } catch (error) {
+      console.error('Failed to parse native discovery:', error);
+    }
+  }
+
+  private handleNativeDisconnect(deviceId: string): void {
+    const peer = this.peers.get(deviceId);
+    if (peer) {
+      this.peers.delete(deviceId);
+      this.peerHandlers.forEach(handler => handler(peer, 'disconnected'));
+      console.log(`Native BLE: Device disconnected: ${deviceId}`);
+    }
+    this.discoveredNativeDevices.delete(deviceId);
+  }
+
+  private async sendNativeAcknowledgment(deviceId: string, messageId: string): Promise<void> {
+    if (!this.nativeService) return;
+    try {
+      const ack = JSON.stringify({
+        id: crypto.randomUUID(),
+        type: 'ack',
+        senderId: this.currentUserId,
+        content: messageId,
+        timestamp: Date.now()
+      });
+      await this.nativeService.sendMessage(deviceId, ack);
+    } catch (error) {
+      console.error('Failed to send native ACK:', error);
+    }
+  }
+
   onMessage(handler: MessageHandler) {
     this.messageHandlers.push(handler);
   }
@@ -112,36 +240,79 @@ export class BluetoothMessagingService {
     this.peerHandlers.push(handler);
   }
 
-  // Start advertising as a Offchat device
   async startAdvertising(): Promise<void> {
     if (this.isAdvertising) return;
 
     try {
-      // Note: Web Bluetooth currently doesn't support advertising from browsers
-      // This would typically be implemented on a companion mobile app
-      // For now, we'll just broadcast discovery messages when connected
       this.isAdvertising = true;
-      console.log('Started Bluetooth advertising (discovery mode)');
-      
-      // Periodically send discovery messages to connected peers
-      this.startDiscoveryBroadcast();
+
+      if (this.nativeService) {
+        await this.nativeService.initialize();
+        await this.nativeService.requestPermissions();
+        await this.nativeService.startAdvertising(this.currentUserId, this.currentUsername);
+        await this.nativeService.startScanning();
+        console.log('Native BLE: Advertising + Scanning started');
+      } else {
+        console.log('Web Bluetooth: Discovery mode started (scanning only)');
+        this.startDiscoveryBroadcast();
+      }
     } catch (error) {
       console.error('Failed to start advertising:', error);
       throw error;
     }
   }
 
-  // Stop advertising
   stopAdvertising(): void {
     this.isAdvertising = false;
+    if (this.nativeService) {
+      this.nativeService.stopAdvertising();
+      this.nativeService.stopScanning();
+    }
     console.log('Stopped Bluetooth advertising');
   }
 
-  // Connect to a nearby Offchat device via Web Bluetooth
   async connectToPeer(): Promise<BluetoothPeer> {
+    if (this.nativeService) {
+      return this.connectToPeerNative();
+    }
+    return this.connectToPeerWeb();
+  }
+
+  private async connectToPeerNative(): Promise<BluetoothPeer> {
+    if (!this.nativeService) throw new Error('Native BLE not initialized');
+
+    await this.nativeService.startScanning();
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('No Offchat devices found nearby. Make sure another Offchat user has offline mode enabled.'));
+      }, 15000);
+
+      const checkInterval = setInterval(() => {
+        const unconnected = Array.from(this.discoveredNativeDevices.entries())
+          .filter(([id]) => !this.peers.has(id));
+
+        if (unconnected.length > 0) {
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+
+          const [deviceId] = unconnected[0];
+          this.connectToNativeDevice(deviceId)
+            .then(() => {
+              const peer = this.peers.get(deviceId);
+              if (peer) resolve(peer);
+              else reject(new Error('Connection established but peer not found'));
+            })
+            .catch(reject);
+        }
+      }, 1000);
+    });
+  }
+
+  private async connectToPeerWeb(): Promise<BluetoothPeer> {
     try {
       let device: BluetoothDevice;
-      
+
       try {
         device = await navigator.bluetooth.requestDevice({
           filters: [
@@ -162,10 +333,10 @@ export class BluetoothMessagingService {
       }
 
       const server = await device.gatt!.connect();
-      
+
       let messageCharacteristic: BluetoothRemoteGATTCharacteristic;
       let discoveryCharacteristic: BluetoothRemoteGATTCharacteristic;
-      
+
       try {
         const service = await server.getPrimaryService(OFFCHAT_SERVICE_UUID);
         messageCharacteristic = await service.getCharacteristic(OFFCHAT_MESSAGE_CHARACTERISTIC_UUID);
@@ -193,55 +364,52 @@ export class BluetoothMessagingService {
         messageBuffer: new Uint8Array(0),
         expectedLength: 0,
         discoveryBuffer: new Uint8Array(0),
-        discoveryExpectedLength: 0
+        discoveryExpectedLength: 0,
+        isNative: false
       };
 
-      await this.setupMessageListener(peer);
+      await this.setupWebMessageListener(peer);
       this.peers.set(device.id, peer);
 
       device.addEventListener('gattserverdisconnected', () => {
-        this.handlePeerDisconnected(peer);
+        this.handleWebPeerDisconnected(peer);
       });
 
-      await this.sendDiscoveryMessage(peer);
+      await this.sendWebDiscoveryMessage(peer);
       this.peerHandlers.forEach(handler => handler(peer, 'connected'));
 
-      console.log(`Connected to Offchat peer: ${device.name || device.id}`);
+      console.log(`Web BLE: Connected to peer: ${device.name || device.id}`);
       return peer;
 
     } catch (error) {
-      console.error('Failed to connect to peer:', error);
+      console.error('Web BLE: Failed to connect to peer:', error);
       throw error;
     }
   }
 
-  // Get advertising status
   getIsAdvertising(): boolean {
     return this.isAdvertising;
   }
 
-  // Set up message listener for a peer
-  private async setupMessageListener(peer: BluetoothPeer): Promise<void> {
+  private async setupWebMessageListener(peer: BluetoothPeer): Promise<void> {
+    if (!peer.messageCharacteristic || !peer.discoveryCharacteristic) return;
+
     try {
-      // Listen for messages
       await peer.messageCharacteristic.startNotifications();
       peer.messageCharacteristic.addEventListener('characteristicvaluechanged', (event: Event) => {
-        this.handleIncomingMessage(event, peer);
+        this.handleWebIncomingMessage(event, peer);
       });
 
-      // Listen for discovery messages
       await peer.discoveryCharacteristic.startNotifications();
       peer.discoveryCharacteristic.addEventListener('characteristicvaluechanged', (event: Event) => {
-        this.handleDiscoveryMessage(event, peer);
+        this.handleWebDiscoveryMessage(event, peer);
       });
-
     } catch (error) {
       console.error('Failed to setup message listener:', error);
       throw error;
     }
   }
 
-  // Send a chat message to a specific peer
   async sendMessage(message: Omit<BluetoothMessage, 'id' | 'timestamp'>, targetPeerId?: string): Promise<void> {
     const bluetoothMessage: BluetoothMessage = {
       ...message,
@@ -249,29 +417,36 @@ export class BluetoothMessagingService {
       timestamp: Date.now()
     };
 
-    const messageData = new TextEncoder().encode(JSON.stringify(bluetoothMessage));
+    const messageStr = JSON.stringify(bluetoothMessage);
 
     if (targetPeerId) {
-      // Send to specific peer
       const peer = this.peers.get(targetPeerId);
-      if (peer) {
-        await this.sendToPeer(peer, messageData, 'message');
+      if (!peer) throw new Error(`Peer ${targetPeerId} not found`);
+
+      if (peer.isNative && this.nativeService) {
+        await this.nativeService.sendMessage(targetPeerId, messageStr);
       } else {
-        throw new Error(`Peer ${targetPeerId} not found`);
+        const messageData = new TextEncoder().encode(messageStr);
+        await this.sendToWebPeer(peer, messageData, 'message');
       }
     } else {
-      // Broadcast to all connected peers
-      const sendPromises = Array.from(this.peers.values()).map(peer => 
-        this.sendToPeer(peer, messageData, 'message').catch(err => 
-          console.error(`Failed to send to peer ${peer.device.id}:`, err)
-        )
-      );
+      const sendPromises = Array.from(this.peers.entries()).map(([id, peer]) => {
+        if (peer.isNative && this.nativeService) {
+          return this.nativeService.sendMessage(id, messageStr).catch(err =>
+            console.error(`Failed to send to native peer ${id}:`, err)
+          );
+        } else {
+          const messageData = new TextEncoder().encode(messageStr);
+          return this.sendToWebPeer(peer, messageData, 'message').catch(err =>
+            console.error(`Failed to send to web peer ${id}:`, err)
+          );
+        }
+      });
       await Promise.allSettled(sendPromises);
     }
   }
 
-  // Send discovery message to introduce ourselves
-  private async sendDiscoveryMessage(peer: BluetoothPeer): Promise<void> {
+  private async sendWebDiscoveryMessage(peer: BluetoothPeer): Promise<void> {
     const discoveryMessage: DiscoveryMessage = {
       id: crypto.randomUUID(),
       type: 'discovery',
@@ -281,146 +456,117 @@ export class BluetoothMessagingService {
     };
 
     const messageData = new TextEncoder().encode(JSON.stringify(discoveryMessage));
-    await this.sendToPeer(peer, messageData, 'discovery');
+    await this.sendToWebPeer(peer, messageData, 'discovery');
   }
 
-  // Send data to a specific peer with proper framing
-  private async sendToPeer(peer: BluetoothPeer, data: Uint8Array, type: 'message' | 'discovery'): Promise<void> {
+  private async sendToWebPeer(peer: BluetoothPeer, data: Uint8Array, type: 'message' | 'discovery'): Promise<void> {
     try {
-      const characteristic = type === 'message' 
-        ? peer.messageCharacteristic 
+      const characteristic = type === 'message'
+        ? peer.messageCharacteristic
         : peer.discoveryCharacteristic;
 
-      // Create frame with length header (4 bytes for length)
+      if (!characteristic) throw new Error('Characteristic not available');
+
       const frame = new Uint8Array(4 + data.length);
       const view = new DataView(frame.buffer);
-      view.setUint32(0, data.length, true); // little-endian length
+      view.setUint32(0, data.length, true);
       frame.set(data, 4);
 
-      // Split framed data into chunks if necessary (BLE has MTU limits)
-      const chunkSize = 20; // Conservative chunk size for BLE
+      const chunkSize = 20;
       for (let i = 0; i < frame.length; i += chunkSize) {
         const chunk = frame.slice(i, i + chunkSize);
         await characteristic.writeValue(chunk);
-        
-        // Small delay between chunks to ensure proper transmission
         await new Promise(resolve => setTimeout(resolve, 10));
       }
-
     } catch (error) {
-      console.error(`Failed to send ${type} to peer:`, error);
+      console.error(`Failed to send ${type} to web peer:`, error);
       throw error;
     }
   }
 
-  // Handle incoming message from peer with reassembly
-  private handleIncomingMessage(event: Event, peer: BluetoothPeer): void {
+  private handleWebIncomingMessage(event: Event, peer: BluetoothPeer): void {
     try {
       const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
       if (!value) return;
 
       const chunk = new Uint8Array(value.buffer);
-      
-      // Check if we need to start a new message (first chunk has length header)
+
       if (peer.messageBuffer.length === 0 && chunk.length >= 4) {
         const view = new DataView(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-        peer.expectedLength = view.getUint32(0, true); // little-endian
-        
-        // Initialize buffer and add remaining data after header
+        peer.expectedLength = view.getUint32(0, true);
         peer.messageBuffer = new Uint8Array(peer.expectedLength);
         const payloadStart = chunk.slice(4);
         peer.messageBuffer.set(payloadStart, 0);
       } else if (peer.messageBuffer.length > 0) {
-        // Append chunk to existing buffer
         const currentLength = peer.messageBuffer.length;
         const newBuffer = new Uint8Array(currentLength + chunk.length);
         newBuffer.set(peer.messageBuffer);
         newBuffer.set(chunk, currentLength);
-        peer.messageBuffer = newBuffer.slice(0, peer.expectedLength); // Truncate to expected length
+        peer.messageBuffer = newBuffer.slice(0, peer.expectedLength);
       }
 
-      // Check if we have the complete message
       if (peer.messageBuffer.length >= peer.expectedLength && peer.expectedLength > 0) {
         const messageStr = new TextDecoder().decode(peer.messageBuffer);
         const message: BluetoothMessage = JSON.parse(messageStr);
 
-        // Reset buffer for next message
         peer.messageBuffer = new Uint8Array(0);
         peer.expectedLength = 0;
-
-        // Update peer's last seen time
         peer.lastSeen = Date.now();
 
-        // Notify message handlers
         this.messageHandlers.forEach(handler => handler(message, peer));
 
-        // Send acknowledgment for chat messages
-        if (message.type === 'chat') {
-          this.sendAcknowledgment(peer, message.id);
+        if (message.type === 'chat' && peer.messageCharacteristic) {
+          this.sendWebAcknowledgment(peer, message.id);
         }
       }
-
     } catch (error) {
       console.error('Failed to process incoming message:', error);
-      // Reset buffer on error
       peer.messageBuffer = new Uint8Array(0);
       peer.expectedLength = 0;
     }
   }
 
-  // Handle discovery message from peer with reassembly
-  private handleDiscoveryMessage(event: Event, peer: BluetoothPeer): void {
+  private handleWebDiscoveryMessage(event: Event, peer: BluetoothPeer): void {
     try {
       const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
       if (!value) return;
 
       const chunk = new Uint8Array(value.buffer);
-      
-      // Check if we need to start a new discovery message
+
       if (peer.discoveryBuffer.length === 0 && chunk.length >= 4) {
         const view = new DataView(chunk.buffer, chunk.byteOffset, chunk.byteLength);
-        peer.discoveryExpectedLength = view.getUint32(0, true); // little-endian
-        
-        // Initialize accumulation buffer and add payload after header
+        peer.discoveryExpectedLength = view.getUint32(0, true);
         const payloadStart = chunk.slice(4);
         peer.discoveryBuffer = new Uint8Array(payloadStart);
       } else if (peer.discoveryExpectedLength > 0) {
-        // Append chunk to accumulating buffer
         const newBuffer = new Uint8Array(peer.discoveryBuffer.length + chunk.length);
         newBuffer.set(peer.discoveryBuffer);
         newBuffer.set(chunk, peer.discoveryBuffer.length);
         peer.discoveryBuffer = newBuffer;
       }
 
-      // Check if we have the complete discovery message
       if (peer.discoveryBuffer.length >= peer.discoveryExpectedLength && peer.discoveryExpectedLength > 0) {
-        // Extract only the expected length (in case we received extra data)
         const completeMessage = peer.discoveryBuffer.slice(0, peer.discoveryExpectedLength);
         const messageStr = new TextDecoder().decode(completeMessage);
         const discoveryMessage: DiscoveryMessage = JSON.parse(messageStr);
 
-        // Reset buffer for next message
         peer.discoveryBuffer = new Uint8Array(0);
         peer.discoveryExpectedLength = 0;
 
-        // Update peer information
         peer.userId = discoveryMessage.userId;
         peer.username = discoveryMessage.username;
         peer.lastSeen = Date.now();
 
         console.log(`Discovered peer: ${discoveryMessage.username} (${discoveryMessage.userId})`);
       }
-
     } catch (error) {
       console.error('Failed to process discovery message:', error);
-      // Reset buffer on error
       peer.discoveryBuffer = new Uint8Array(0);
       peer.discoveryExpectedLength = 0;
     }
   }
 
-  // Send acknowledgment for received message
-  private async sendAcknowledgment(peer: BluetoothPeer, messageId: string): Promise<void> {
+  private async sendWebAcknowledgment(peer: BluetoothPeer, messageId: string): Promise<void> {
     try {
       const ackMessage: BluetoothMessage = {
         id: crypto.randomUUID(),
@@ -431,70 +577,78 @@ export class BluetoothMessagingService {
       };
 
       const messageData = new TextEncoder().encode(JSON.stringify(ackMessage));
-      await this.sendToPeer(peer, messageData, 'message');
-
+      await this.sendToWebPeer(peer, messageData, 'message');
     } catch (error) {
       console.error('Failed to send acknowledgment:', error);
     }
   }
 
-  // Handle peer disconnection
-  private handlePeerDisconnected(peer: BluetoothPeer): void {
+  private handleWebPeerDisconnected(peer: BluetoothPeer): void {
     this.peers.delete(peer.device.id);
     this.peerHandlers.forEach(handler => handler(peer, 'disconnected'));
-    console.log(`Peer disconnected: ${peer.device.name || peer.device.id}`);
+    console.log(`Peer disconnected: ${(peer.device as any).name || peer.device.id}`);
   }
 
-  // Start periodic discovery broadcast
   private startDiscoveryBroadcast(): void {
     if (!this.isAdvertising) return;
 
     setInterval(async () => {
       if (!this.isAdvertising) return;
 
-      // Send discovery messages to all connected peers
       for (const peer of this.peers.values()) {
-        try {
-          await this.sendDiscoveryMessage(peer);
-        } catch (error) {
-          console.error('Failed to send discovery message:', error);
+        if (!peer.isNative) {
+          try {
+            await this.sendWebDiscoveryMessage(peer);
+          } catch (error) {
+            console.error('Failed to send discovery message:', error);
+          }
         }
       }
-    }, 30000); // Every 30 seconds
+    }, 30000);
   }
 
-  // Get all connected peers
   getConnectedPeers(): BluetoothPeer[] {
     return Array.from(this.peers.values());
   }
 
-  // Get peer by user ID
+  getDiscoveredDevices(): NativeBleDevice[] {
+    return Array.from(this.discoveredNativeDevices.values());
+  }
+
   getPeerByUserId(userId: string): BluetoothPeer | undefined {
     return Array.from(this.peers.values()).find(peer => peer.userId === userId);
   }
 
-  // Disconnect from all peers
   disconnectAll(): void {
+    if (this.nativeService) {
+      this.nativeService.disconnectAll();
+    }
+
     for (const peer of this.peers.values()) {
-      try {
-        peer.server.disconnect();
-      } catch (error) {
-        console.error('Error disconnecting peer:', error);
+      if (!peer.isNative && peer.server) {
+        try {
+          peer.server.disconnect();
+        } catch (error) {
+          console.error('Error disconnecting web peer:', error);
+        }
       }
     }
     this.peers.clear();
+    this.discoveredNativeDevices.clear();
     this.stopAdvertising();
   }
 
-  // Get connection statistics
   getStats(): { connectedPeers: number; totalMessages: number; uptime: number } {
     return {
       connectedPeers: this.peers.size,
-      totalMessages: 0, // Would track this in a real implementation
+      totalMessages: 0,
       uptime: this.isAdvertising ? Date.now() : 0
     };
   }
+
+  isNative(): boolean {
+    return this.nativeService !== null;
+  }
 }
 
-// Export types for external use
 export type { BluetoothMessage, BluetoothPeer, MessageHandler, PeerHandler };
