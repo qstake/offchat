@@ -58,6 +58,23 @@ jobs:
     - name: Add iOS platform
       run: npx cap add ios
 
+    - name: Fix iOS deployment target
+      run: |
+        PODFILE="ios/App/Podfile"
+        if [ -f "$PODFILE" ]; then
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '16.0'/g" "$PODFILE"
+          echo "iOS deployment target set to 16.0"
+        fi
+        PROJECT="ios/App/App.xcodeproj/project.pbxproj"
+        if [ -f "$PROJECT" ]; then
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9]*\.[0-9]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' "$PROJECT"
+          echo "Xcode project deployment target set to 16.0"
+        fi
+
+    - name: Run pod install
+      working-directory: ios/App
+      run: pod install
+
     - name: Add Bluetooth usage descriptions to Info.plist
       run: |
         PLIST="ios/App/App/Info.plist"
