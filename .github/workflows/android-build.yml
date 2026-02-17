@@ -175,9 +175,33 @@ jobs:
       working-directory: android
       run: ./gradlew assembleDebug
 
-    - name: Build release AAB
+    - name: Decode keystore
+      run: |
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/offchat-release.keystore
+
+    - name: Configure signing in build.gradle
+      run: |
+        APP_BUILD="android/app/build.gradle"
+        sed -i '/android {/a \
+            signingConfigs {\
+                release {\
+                    storeFile file("offchat-release.keystore")\
+                    storePassword System.getenv("KEYSTORE_PASSWORD")\
+                    keyAlias System.getenv("KEY_ALIAS")\
+                    keyPassword System.getenv("KEY_PASSWORD")\
+                }\
+            }' "$APP_BUILD"
+        sed -i '/buildTypes {/,/release {/ { /release {/a \
+                signingConfig signingConfigs.release
+        }' "$APP_BUILD"
+
+    - name: Build signed release AAB
       working-directory: android
       run: ./gradlew bundleRelease
+      env:
+        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     - name: Upload debug APK
       uses: actions/upload-artifact@v4
@@ -186,7 +210,7 @@ jobs:
         path: android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 30
 
-    - name: Upload release AAB
+    - name: Upload signed release AAB
       uses: actions/upload-artifact@v4
       with:
         name: offchat-release-aab
