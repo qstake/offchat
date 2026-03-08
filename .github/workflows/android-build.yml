@@ -20,10 +20,7 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: |
-        sed -i '/"@replit\/connectors-sdk"/d' package.json
-        sed -i '/"@replit\/vite-plugin-cartographer"/d' package.json
-        npm install --legacy-peer-deps
+      run: npm ci
 
     - name: Build web app
       run: npm run build
@@ -32,7 +29,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '21'
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
@@ -44,46 +41,43 @@ jobs:
 
     - name: Create Capacitor config
       run: |
-        cat > capacitor.config.ts << 'CAPEOF'
-import type { CapacitorConfig } from '@capacitor/cli';
-const config: CapacitorConfig = {
-  appId: 'app.offchat.messenger',
-  appName: 'Offchat',
-  webDir: 'dist/public',
-  server: {
-    androidScheme: 'https',
-    hostname: 'offchat.app',
-    allowNavigation: ['offchat.app', '*.offchat.app']
-  },
-  plugins: {
-    CapacitorHttp: {
-      enabled: true
-    },
-    StatusBar: {
-      style: 'DARK',
-      overlaysWebView: true
-    },
-    BluetoothLe: {
-      displayStrings: {
-        scanning: 'Searching for Offchat users...',
-        cancel: 'Cancel',
-        availableDevices: 'Nearby Offchat Users',
-        noDeviceFound: 'No Offchat users found nearby'
-      }
-    }
-  }
-};
-export default config;
-CAPEOF
+        cat > capacitor.config.ts << 'EOF'
+        import type { CapacitorConfig } from '@capacitor/cli';
+        const config: CapacitorConfig = {
+          appId: 'app.offchat.messenger',
+          appName: 'Offchat',
+          webDir: 'dist/public',
+          server: {
+            androidScheme: 'https'
+          },
+          plugins: {
+            BluetoothLe: {
+              displayStrings: {
+                scanning: 'Searching for Offchat users...',
+                cancel: 'Cancel',
+                availableDevices: 'Nearby Offchat Users',
+                noDeviceFound: 'No Offchat users found nearby'
+              }
+            }
+          }
+        };
+        export default config;
+        EOF
 
     - name: Add Android platform
       run: npx cap add android
 
-    - name: Set version code and name
+    - name: Fix Java compatibility for Capacitor
       run: |
-        APP_BUILD="android/app/build.gradle"
-        sed -i "s/versionCode 1/versionCode ${GITHUB_RUN_NUMBER}/" "$APP_BUILD"
-        sed -i 's/versionName "1.0"/versionName "1.1.0"/' "$APP_BUILD"
+        VARS="android/variables.gradle"
+        if [ -f "$VARS" ]; then
+          sed -i 's/= 21/= 17/g' "$VARS"
+        fi
+        CAP_BUILD="android/capacitor-android/build.gradle"
+        if [ -f "$CAP_BUILD" ]; then
+          sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' "$CAP_BUILD"
+          sed -i "s/jvmTarget = '21'/jvmTarget = '17'/g" "$CAP_BUILD"
+        fi
 
     - name: Fix Kotlin duplicate class conflict
       run: |
@@ -145,9 +139,7 @@ CAPEOF
         <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
         <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
         <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
-        <uses-permission android:name="android.permission.INTERNET" />\
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\
-        <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
+        <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />' \
         "$MANIFEST"
 
     - name: Install native BLE Advertiser plugin
@@ -161,26 +153,23 @@ CAPEOF
       run: |
         MAIN_ACTIVITY="android/app/src/main/java/app/offchat/messenger/MainActivity.java"
         cat > "$MAIN_ACTIVITY" << 'JAVA'
-package app.offchat.messenger;
+        package app.offchat.messenger;
 
-import com.getcapacitor.BridgeActivity;
-import app.offchat.messenger.plugins.BleAdvertiserPlugin;
+        import com.getcapacitor.BridgeActivity;
+        import app.offchat.messenger.plugins.BleAdvertiserPlugin;
 
-public class MainActivity extends BridgeActivity {
-    @Override
-    public void onCreate(android.os.Bundle savedInstanceState) {
-        registerPlugin(BleAdvertiserPlugin.class);
-        super.onCreate(savedInstanceState);
-    }
-}
-JAVA
+        public class MainActivity extends BridgeActivity {
+            @Override
+            public void onCreate(android.os.Bundle savedInstanceState) {
+                registerPlugin(BleAdvertiserPlugin.class);
+                super.onCreate(savedInstanceState);
+            }
+        }
+        JAVA
         echo "MainActivity.java written with BLE Advertiser plugin"
 
     - name: Sync Capacitor
       run: npx cap sync android
-
-    - name: Make gradlew executable
-      run: chmod +x android/gradlew
 
     - name: Build debug APK
       working-directory: android
