@@ -62,6 +62,7 @@ The application uses four main entities:
 - `/privacy` - Privacy Policy
 - `/user-profile/:address` - Public user profile
 - `/group-profile/:id` - Group profile view
+- `/help` - Help & Support with FAQ and feedback form
 
 ## Key Components
 - `chat-area.tsx` - Main chat message area with real-time messaging
@@ -172,3 +173,16 @@ The application uses four main entities:
 - 2026-02-13: Cleaned up unused files (old branding assets, backup files)
 - 2026-02-13: Updated robots.txt and sitemap.xml with all current pages
 - 2026-02-13: Matrix rain animations using katakana + kanji characters on splash, chat welcome, swap pages
+- 2026-02-14: Activated Bluetooth mesh offline messaging with real user context
+- 2026-02-14: Added native Android BLE support: GATT server with advertising + scanning for two-way device discovery
+- 2026-02-14: Created CapacitorBluetoothService abstraction layer for native vs web BLE
+- 2026-02-14: Created BleAdvertiserPlugin.java (custom Capacitor plugin) with CCCD notification support
+- 2026-02-14: Updated GitHub Actions workflow with @capacitor-community/bluetooth-le and native plugin injection
+- 2026-02-14: Added periodic BLE rescanning (every 30s) for discovering new devices after initial scan
+- 2026-02-14: Fixed iOS safe area - added viewport-fit=cover and safe-area-inset-top padding to all page headers (chat-sidebar, chat-area, swap, crypto-market, crypto-detail, nft-collection, offc-transfers, about, roadmap, whitepaper, terms, privacy, user-profile, group-profile)
+- 2026-03-08: Added onboarding walkthrough system (4 steps, localStorage persistence, shown only on first visit)
+- 2026-03-08: Fixed "Back to Chat" navigation on Privacy and Terms pages (replaced window.close() with wouter navigation)
+- 2026-03-08: Added back arrow navigation to Privacy and Terms page headers
+- 2026-03-08: Updated bottom nav with 4th "More" tab linking to Help & Support
+- 2026-03-08: Created Help & Support page (/help) with FAQ accordion and feedback form
+- 2026-03-08: Added page transition animations and button press feedback (scale + opacity)

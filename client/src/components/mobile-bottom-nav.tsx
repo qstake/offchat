@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, Wallet, ArrowUpDown } from "lucide-react";
+import { MessageCircle, Wallet, ArrowUpDown, MoreHorizontal } from "lucide-react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ export default function MobileBottomNav({
       setActiveTab("swap");
     } else if (location.startsWith("/crypto-market") || location.startsWith("/crypto") || location.startsWith("/offc-transfers")) {
       setActiveTab("crypto");
+    } else if (location.startsWith("/help") || location.startsWith("/nft") || location.startsWith("/about") || location.startsWith("/roadmap") || location.startsWith("/privacy") || location.startsWith("/terms")) {
+      setActiveTab("more");
     }
   }, [location]);
 
@@ -76,6 +78,17 @@ export default function MobileBottomNav({
             <ArrowUpDown className="mobile-nav-icon" strokeWidth={activeTab === "swap" ? 2.5 : 1.5} />
           </div>
           <span className="mobile-nav-label">{t('nav.swap')}</span>
+        </Link>
+
+        <Link
+          href="/help"
+          className={cn("mobile-nav-item", activeTab === "more" && "active")}
+          onClick={() => { setActiveTab("more"); if (navigator.vibrate) navigator.vibrate(10); }}
+        >
+          <div className="mobile-nav-icon-container">
+            <MoreHorizontal className="mobile-nav-icon" strokeWidth={activeTab === "more" ? 2.5 : 1.5} />
+          </div>
+          <span className="mobile-nav-label">More</span>
         </Link>
       </div>
     </div>

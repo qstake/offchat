@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from 'react-i18next';
-import { Calendar, Shield, Eye, Lock, Database, Users, FileText, AlertTriangle } from "lucide-react";
+import { useLocation } from "wouter";
+import { Calendar, Shield, Eye, Lock, Database, Users, FileText, AlertTriangle, ArrowLeft } from "lucide-react";
 import MatrixBackground from "@/components/matrix-background";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,12 @@ const offchatLogo = "/logo.png";
 
 export default function PrivacyPage() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+
+  const handleBackToChat = () => {
+    setLocation("/chat");
+  };
+
   useEffect(() => {
     document.title = "Privacy Policy - Offchat";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -18,98 +25,117 @@ export default function PrivacyPage() {
     if (ogDesc) ogDesc.setAttribute('content', 'Read Offchat\'s Privacy Policy. Learn how we protect your data with end-to-end encryption and decentralized storage on our Web3 messaging platform.');
   }, []);
 
-  const lastUpdated = "September 11, 2025";
-  const effectiveDate = "January 1, 2026";
+  const lastUpdated = "February 15, 2026";
+  const effectiveDate = "February 15, 2026";
 
   const sections = [
     {
       id: "introduction",
       title: "1. INTRODUCTION AND SCOPE",
-      content: `Offchat Protocol LLC ("Company", "we", "us") is committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, process, and safeguard your information when you use the Offchat platform ("Platform"). This policy applies to all users of our decentralized messaging and cryptocurrency transaction services.`
+      content: `Offchat Protocol LLC ("Company", "we", "us", "our") is committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, process, store, and safeguard your information when you use the Offchat mobile application and web platform (collectively, the "Platform"), available on iOS, Android, and the web. This policy applies to all users of our messaging, cryptocurrency wallet, token swapping, NFT management, and related services. By using the Platform, you agree to the practices described in this Privacy Policy. If you do not agree, please do not use the Platform.`
     },
     {
       id: "information",
       title: "2. INFORMATION WE COLLECT",
-      content: `We collect minimal information necessary to provide our services: (a) Wallet Information: Cryptocurrency wallet addresses and public keys for authentication; (b) Communications Data: Message metadata (not content), timestamps, and delivery confirmations; (c) Technical Data: IP addresses, device information, browser type, and usage analytics; (d) Transaction Data: Blockchain transaction hashes and amounts (publicly available on-chain); (e) Account Data: Username, profile information you choose to provide.`
+      content: `We collect the following categories of information: (a) Contact Information: Email address provided during account creation or support requests; (b) Identifiers: Cryptocurrency wallet addresses, public keys, user IDs, and device identifiers used for authentication and account management; (c) Usage Data: App interaction data, feature usage patterns, session duration, crash logs, and performance diagnostics to improve the Platform; (d) Communications Data: Messages you send and receive through the Platform (encrypted end-to-end), message metadata such as timestamps and delivery status; (e) Transaction Data: Blockchain transaction hashes, token amounts, and wallet balances (publicly available on-chain data); (f) Account Data: Username, display name, profile image, and other profile information you choose to provide; (g) Technical Data: IP addresses, device type and model, operating system version, app version, browser type, and general location data (country/region level only).`
     },
     {
       id: "collection",
       title: "3. HOW WE COLLECT INFORMATION",
-      content: `Information is collected through: (a) Direct input when you register or use features; (b) Automatic collection through cookies and similar technologies; (c) Blockchain networks when you conduct transactions; (d) Third-party wallet providers during authentication; (e) Analytics services to improve platform performance. We use industry-standard encryption for all data transmission and storage.`
+      content: `Information is collected through: (a) Direct input when you create an account, set up your profile, send messages, or use features such as token swapping or NFT uploads; (b) Automatic collection when you use the Platform, including device information, usage analytics, and crash reports; (c) Blockchain networks when you conduct cryptocurrency transactions (this data is publicly available on the blockchain); (d) Third-party services we use for infrastructure, including cloud hosting and data storage providers operating under strict data processing agreements. We do not purchase or obtain your personal information from third-party data brokers.`
     },
     {
       id: "usage",
       title: "4. HOW WE USE YOUR INFORMATION",
-      content: `We use collected information to: (a) Provide and maintain platform services; (b) Authenticate users and prevent fraud; (c) Process cryptocurrency transactions; (d) Improve platform security and functionality; (e) Comply with legal obligations; (f) Communicate platform updates and security alerts; (g) Analyze usage patterns for optimization. We do not read private message content or sell personal data.`
+      content: `We use collected information solely for the following purposes: (a) Providing, operating, and maintaining the Platform and its features including messaging, wallet management, token swapping, and NFT collections; (b) Authenticating users and securing accounts; (c) Processing and facilitating cryptocurrency transactions you initiate; (d) Sending you important service notifications, security alerts, and account-related communications; (e) Diagnosing technical issues, analyzing crash reports, and improving Platform performance and reliability; (f) Complying with applicable laws, regulations, and legal processes; (g) Detecting, preventing, and addressing fraud, abuse, and security threats. We do not use your data for advertising, marketing profiling, or selling to third parties. We do not read the content of your encrypted messages.`
     },
     {
       id: "sharing",
       title: "5. INFORMATION SHARING AND DISCLOSURE",
-      content: `We do not sell your personal information. We may share data only in these limited circumstances: (a) With your explicit consent; (b) To comply with legal obligations or court orders; (c) To protect our rights, property, or safety; (d) With service providers under strict confidentiality agreements; (e) In connection with business transfers or mergers; (f) Anonymized data for research or analytics purposes.`
+      content: `We do not sell, rent, or trade your personal information to any third party. We may share data only in the following limited circumstances: (a) With your explicit consent; (b) With service providers who assist us in operating the Platform (such as cloud hosting and data storage), bound by strict confidentiality and data processing agreements; (c) To comply with legal obligations, court orders, subpoenas, or lawful government requests; (d) To protect our rights, property, safety, or the rights and safety of our users or the public; (e) In connection with a merger, acquisition, or sale of assets, in which case you will be notified of any change in data handling practices; (f) In anonymized or aggregated form that cannot be used to identify you.`
     },
     {
       id: "encryption",
       title: "6. ENCRYPTION AND SECURITY",
-      content: `We implement military-grade security measures: (a) End-to-end encryption using Signal Protocol for messages; (b) AES-256 encryption for data at rest; (c) TLS 1.3 for data in transit; (d) Zero-knowledge architecture where possible; (e) Regular security audits and penetration testing; (f) Multi-factor authentication options; (g) Hardware security modules for key management. However, no system is 100% secure.`
+      content: `We implement robust security measures to protect your data: (a) End-to-end encryption for messages, ensuring only the sender and recipient can read message content; (b) AES-256 encryption for data stored on our servers; (c) TLS 1.3 encryption for all data transmitted between your device and our servers; (d) Secure key storage on your device for wallet private keys, which are never transmitted to or stored on our servers; (e) Regular security assessments and code reviews; (f) Access controls limiting employee access to user data on a need-to-know basis. While we strive to protect your information, no method of electronic transmission or storage is completely secure. We cannot guarantee absolute security.`
     },
     {
       id: "retention",
       title: "7. DATA RETENTION AND DELETION",
-      content: `We retain data only as long as necessary: (a) Account data: Until account deletion plus 30 days for security; (b) Message metadata: 90 days for operational purposes; (c) Transaction data: Permanently (blockchain records are immutable); (d) Analytics data: Anonymized after 12 months; (e) Legal compliance data: As required by applicable law. You can request data deletion through your account settings.`
+      content: `We retain your data only as long as necessary to provide our services and fulfill the purposes described in this policy: (a) Account data is retained until you delete your account, after which it is permanently removed within 30 days; (b) Message content is stored in encrypted form and deleted when you delete your account; (c) Message metadata (timestamps, delivery status) is retained for up to 90 days for operational purposes; (d) Transaction data recorded on public blockchains is permanent and immutable — we cannot delete blockchain records; (e) Technical logs and analytics data are anonymized or deleted within 12 months; (f) Data required for legal compliance is retained as mandated by applicable law. You may request deletion of your account and associated data at any time by contacting us at support@offchat.app. Upon receiving a verified deletion request, we will delete or anonymize your personal data within 30 days, except where retention is required by law or for legitimate business purposes (such as resolving disputes).`
     },
     {
       id: "rights",
       title: "8. YOUR PRIVACY RIGHTS",
-      content: `You have the right to: (a) Access your personal information we hold; (b) Correct inaccurate or incomplete data; (c) Request deletion of your data (subject to legal requirements); (d) Object to processing for marketing purposes; (e) Data portability where technically feasible; (f) Withdraw consent where processing is based on consent; (g) Lodge complaints with supervisory authorities. Contact us to exercise these rights.`
+      content: `Depending on your jurisdiction, you may have the following rights regarding your personal data: (a) Right of Access: Request a copy of the personal information we hold about you; (b) Right to Correction: Request that we correct inaccurate or incomplete data; (c) Right to Deletion: Request deletion of your personal data, subject to legal requirements and blockchain immutability; (d) Right to Data Portability: Request your data in a structured, machine-readable format where technically feasible; (e) Right to Object: Object to processing of your data for certain purposes; (f) Right to Withdraw Consent: Where processing is based on consent, you may withdraw it at any time; (g) Right to Non-Discrimination: We will not discriminate against you for exercising your privacy rights. To exercise any of these rights, contact us at support@offchat.app. We will respond to verified requests within 30 days.`
+    },
+    {
+      id: "ccpa",
+      title: "9. CALIFORNIA PRIVACY RIGHTS (CCPA/CPRA)",
+      content: `If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) as amended by the California Privacy Rights Act (CPRA): (a) Right to Know: You may request disclosure of the categories and specific pieces of personal information we have collected about you, the sources of collection, the business purposes for collection, and the categories of third parties with whom we share it; (b) Right to Delete: You may request deletion of your personal information, subject to certain exceptions; (c) Right to Opt-Out of Sale: We do not sell your personal information. We do not share your personal information for cross-context behavioral advertising; (d) Right to Non-Discrimination: We will not deny you services, charge different prices, or provide different quality of service for exercising your CCPA rights; (e) Authorized Agents: You may designate an authorized agent to make requests on your behalf. To submit a CCPA request, contact us at support@offchat.app. We will verify your identity before processing your request.`
     },
     {
       id: "cookies",
-      title: "9. COOKIES AND TRACKING",
-      content: `We use cookies and similar technologies for: (a) Essential platform functionality; (b) Security and fraud prevention; (c) Analytics and performance monitoring; (d) User preference storage. You can control cookie settings through your browser, but this may affect platform functionality. We do not use third-party advertising cookies.`
+      title: "10. COOKIES AND TRACKING",
+      content: `On our web platform, we use cookies and similar technologies for: (a) Essential platform functionality and session management; (b) Security and fraud prevention; (c) Performance monitoring and diagnostics. We do not use third-party advertising or tracking cookies. We do not track you across third-party websites or apps. Our mobile applications do not use cookies but may collect similar functional data as described in Section 2. You can control cookie settings through your browser preferences, but disabling essential cookies may affect platform functionality.`
+    },
+    {
+      id: "thirdparty",
+      title: "11. THIRD-PARTY SERVICES AND SDKS",
+      content: `The Platform may integrate with or rely on the following types of third-party services: (a) Blockchain Networks: Ethereum, BNB Smart Chain, Arbitrum, Polygon, Base, and Optimism for processing cryptocurrency transactions. Transactions on these networks are public and governed by their respective protocols; (b) Cloud Infrastructure: We use third-party cloud providers for hosting and data storage, operating under strict data processing agreements; (c) Market Data Providers: We display cryptocurrency price data from third-party APIs. These providers may receive your IP address when data is requested; (d) Bluetooth Low Energy: The Platform includes optional peer-to-peer Bluetooth messaging functionality that operates locally between devices without transmitting data to our servers. Each third-party service is governed by its own privacy policy. We encourage you to review their policies.`
     },
     {
       id: "international",
-      title: "10. INTERNATIONAL DATA TRANSFERS",
-      content: `As a global platform, your data may be transferred to countries with different privacy laws. We ensure adequate protection through: (a) Standard Contractual Clauses for EU transfers; (b) Adequacy decisions where available; (c) Encryption during transfer and storage; (d) Regular compliance assessments. By using the platform, you consent to these transfers.`
+      title: "12. INTERNATIONAL DATA TRANSFERS",
+      content: `As a global platform, your data may be processed in countries outside your country of residence. We ensure adequate protection for international transfers through: (a) Standard Contractual Clauses approved by relevant authorities for data transferred from the European Economic Area; (b) Encryption of data during transfer and at rest; (c) Data processing agreements with all service providers; (d) Regular compliance assessments. By using the Platform, you acknowledge and consent to the transfer of your data to the United States and other jurisdictions where our service providers operate.`
     },
     {
       id: "minors",
-      title: "11. CHILDREN'S PRIVACY",
-      content: `The Platform is not designed for children under 18. We do not knowingly collect personal information from minors. If we discover we have collected information from a minor, we will delete it immediately. Parents who believe their child has provided information should contact us immediately.`
+      title: "13. CHILDREN'S PRIVACY",
+      content: `The Platform is not intended for use by anyone under the age of 18. We do not knowingly collect personal information from children under 18. If you are a parent or guardian and believe your child has provided us with personal information, please contact us immediately at support@offchat.app. If we become aware that we have collected personal information from a child under 18, we will take steps to delete that information as soon as possible.`
     },
     {
       id: "blockchain",
-      title: "12. BLOCKCHAIN AND CRYPTOCURRENCY PRIVACY",
-      content: `Blockchain transactions are inherently public and permanent. While wallet addresses are pseudonymous, they may be linked to your identity through various means. We cannot control or delete blockchain records. Consider privacy implications before conducting transactions. Use privacy coins or mixing services if enhanced anonymity is required.`
+      title: "14. BLOCKCHAIN AND CRYPTOCURRENCY PRIVACY",
+      content: `Important information about blockchain privacy: (a) All cryptocurrency transactions are recorded on public blockchains and are permanently visible to anyone. We cannot modify, delete, or hide blockchain transaction records; (b) While wallet addresses are pseudonymous, they may potentially be linked to your identity through various means including blockchain analysis; (c) Your wallet private keys are generated and stored locally on your device. We never have access to your private keys; (d) Token balances and transaction histories associated with your wallet addresses are publicly accessible on the blockchain. Please consider these privacy implications before conducting cryptocurrency transactions through the Platform.`
     },
     {
       id: "updates",
-      title: "13. POLICY UPDATES",
-      content: `We may update this Privacy Policy to reflect changes in our practices, technology, or legal requirements. Material changes will be notified through the Platform or via email. Continued use after notification constitutes acceptance. We recommend reviewing this policy periodically.`
+      title: "15. POLICY UPDATES",
+      content: `We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. When we make material changes, we will: (a) Update the "Last Updated" date at the top of this policy; (b) Notify you through the Platform via an in-app notification; (c) For significant changes, provide notice at least 7 days before the changes take effect. Your continued use of the Platform after the updated Privacy Policy becomes effective constitutes your acceptance of the changes. If you do not agree with the updated policy, you should stop using the Platform and request deletion of your account.`
     },
     {
       id: "contact",
-      title: "14. CONTACT INFORMATION",
-      content: `For privacy-related questions or requests, contact our Data Protection Officer at: privacy@offchatapp.com or Offchat Protocol LLC, Privacy Department, 1234 Blockchain Avenue, Crypto City, CC 12345, United States. We will respond to legitimate requests within 30 days.`
+      title: "16. CONTACT INFORMATION",
+      content: `For any privacy-related questions, concerns, data access requests, or deletion requests, please contact us at: Email: support@offchat.app. We will acknowledge your request within 48 hours and provide a substantive response within 30 days. If you are not satisfied with our response, you may have the right to lodge a complaint with your local data protection authority.`
     }
   ];
 
   const dataCategories = [
-    { category: "Wallet Addresses", purpose: "Authentication", retention: "Account lifetime", security: "Public key cryptography" },
-    { category: "Message Metadata", purpose: "Delivery & routing", retention: "90 days", security: "AES-256 encryption" },
-    { category: "Transaction Data", purpose: "Blockchain operations", retention: "Permanent (immutable)", security: "Blockchain consensus" },
-    { category: "Technical Logs", purpose: "Security & optimization", retention: "12 months", security: "Encrypted storage" },
-    { category: "Profile Information", purpose: "User experience", retention: "User controlled", security: "Access controls" }
+    { category: "Contact Info (Email)", purpose: "Account & support", retention: "Account lifetime", security: "Encrypted storage" },
+    { category: "Identifiers (Wallet, User ID)", purpose: "Authentication", retention: "Account lifetime", security: "Public key cryptography" },
+    { category: "Usage Data (Analytics)", purpose: "App improvement", retention: "12 months", security: "Anonymized & encrypted" },
+    { category: "Messages (Encrypted)", purpose: "Messaging service", retention: "Account lifetime", security: "End-to-end encryption" },
+    { category: "Transaction Data", purpose: "Blockchain operations", retention: "Permanent (on-chain)", security: "Blockchain consensus" },
+    { category: "Profile Information", purpose: "User experience", retention: "User controlled", security: "Access controls" },
+    { category: "Technical Logs", purpose: "Diagnostics & security", retention: "12 months", security: "Encrypted storage" }
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
+    <div className="min-h-screen bg-background text-foreground relative page-transition">
       <MatrixBackground />
       
       <div className="relative z-10">
         {/* Header */}
         <header className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="container mx-auto px-4 py-8">
+            <button
+              onClick={handleBackToChat}
+              className="flex items-center gap-2 text-primary/60 hover:text-primary transition-colors mb-4 font-mono text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Chat
+            </button>
             <div className="flex items-center justify-center space-x-3 mb-4">
               <img 
                 src={offchatLogo} 
@@ -217,10 +243,10 @@ export default function PrivacyPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
                 <Button 
-                  onClick={() => window.close()}
+                  onClick={handleBackToChat}
                   className="cyber-button bg-primary/20 hover:bg-primary/30 border-primary/50 hover:border-primary text-primary font-mono px-6 py-2 text-sm transition-all duration-150 neon-glow"
                 >
-                  <FileText className="w-3 h-3 mr-2" />
+                  <ArrowLeft className="w-3 h-3 mr-2" />
                   {t('privacy.backToChat')}
                 </Button>
                 <Button 

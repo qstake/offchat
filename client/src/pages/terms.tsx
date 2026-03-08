@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from 'react-i18next';
-import { Calendar, Scale, Shield, AlertTriangle, FileText, Users, Gavel } from "lucide-react";
+import { useLocation } from "wouter";
+import { Calendar, Scale, Shield, AlertTriangle, FileText, Users, Gavel, ArrowLeft } from "lucide-react";
 import MatrixBackground from "@/components/matrix-background";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,12 @@ const offchatLogo = "/logo.png";
 
 export default function TermsPage() {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
+
+  const handleBackToChat = () => {
+    setLocation("/chat");
+  };
+
   useEffect(() => {
     document.title = "Terms of Service - Offchat";
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -95,13 +102,20 @@ export default function TermsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
+    <div className="min-h-screen bg-background text-foreground relative page-transition">
       <MatrixBackground />
       
       <div className="relative z-10">
         {/* Header */}
         <header className="glass-card border-b border-primary/20 bg-black/95 backdrop-blur-md" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="container mx-auto px-4 py-8">
+            <button
+              onClick={handleBackToChat}
+              className="flex items-center gap-2 text-primary/60 hover:text-primary transition-colors mb-4 font-mono text-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Chat
+            </button>
             <div className="flex items-center justify-center space-x-3 mb-4">
               <img 
                 src={offchatLogo} 
@@ -179,10 +193,10 @@ export default function TermsPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-4">
                 <Button 
-                  onClick={() => window.close()}
+                  onClick={handleBackToChat}
                   className="cyber-button bg-primary/20 hover:bg-primary/30 border-primary/50 hover:border-primary text-primary font-mono px-6 py-2 text-sm transition-all duration-150 neon-glow"
                 >
-                  <FileText className="w-3 h-3 mr-2" />
+                  <ArrowLeft className="w-3 h-3 mr-2" />
                   {t('terms.backToChat')}
                 </Button>
                 <Button 

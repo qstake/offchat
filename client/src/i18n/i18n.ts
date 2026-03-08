@@ -11,6 +11,8 @@ import ko from './locales/ko.json';
 import ar from './locales/ar.json';
 import ru from './locales/ru.json';
 
+const supportedLngs = ['en', 'tr', 'es', 'zh', 'ja', 'ko', 'ar', 'ru'];
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
@@ -25,7 +27,9 @@ i18n
       ar: { translation: ar },
       ru: { translation: ru },
     },
+    supportedLngs,
     fallbackLng: 'en',
+    load: 'languageOnly',
     interpolation: {
       escapeValue: false,
     },

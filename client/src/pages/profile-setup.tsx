@@ -208,7 +208,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     },
   });
 
-  // Avatar upload handlers
   const handleGetUploadParameters = async () => {
     try {
       const response = await fetch('/api/objects/upload', {
@@ -224,7 +223,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
   };
 
   const handleAvatarUploadStart = (file: File) => {
-    // Create local preview URL immediately when file is selected
     const previewURL = URL.createObjectURL(file);
     setProfileData(prev => ({ 
       ...prev, 
@@ -240,11 +238,9 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
         const avatarURL = uploadedFile.uploadURL;
         
         if (avatarURL) {
-          // Store the upload URL - keep the preview URL for display
           setProfileData(prev => ({ 
             ...prev, 
             avatar: avatarURL
-            // Keep existing avatarPreview for immediate display
           }));
           
           toast({
@@ -255,7 +251,6 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
       }
     } catch (error) {
       console.error('Error handling avatar upload:', error);
-      // Clear preview on error
       setProfileData(prev => ({ 
         ...prev, 
         avatarPreview: ""
@@ -344,28 +339,23 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
     setProfileData(prev => ({ 
       ...prev, 
       avatar: firstLetter,
-      avatarPreview: '' // Clear preview when using generated avatar
+      avatarPreview: ''
     }));
   };
 
   return (
     <div className="min-h-screen bg-black text-green-400 relative overflow-hidden">
-      {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-green-950/20 via-black to-green-950/10"></div>
       
-      {/* Main Container */}
-      <div className="min-h-screen relative z-10 flex items-center justify-center p-4">
-        <div className="w-full max-w-md mx-auto">
-          {/* Matrix Profile Card */}
+      <div className="min-h-screen relative z-10 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}>
+        <div className="w-full max-w-md mx-auto my-2 sm:my-0">
           <div className="bg-black/95 border-2 border-green-400/30 backdrop-blur-sm relative">
-            {/* Matrix-style borders */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent"></div>
             <div className="absolute bottom-0 left-0 w-full h-px bg-green-400/20"></div>
             
-            {/* Matrix Header */}
-            <div className="text-center py-3 md:py-6 border-b border-green-400/20">
-              <div className="relative mb-2 md:mb-4">
-                <div className="w-8 h-8 md:w-12 md:h-12 mx-auto relative">
+            <div className="text-center py-3 border-b border-green-400/20">
+              <div className="relative mb-2">
+                <div className="w-8 h-8 mx-auto relative">
                   <img 
                     src={offchatLogo} 
                     alt="Offchat Logo" 
@@ -377,25 +367,24 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <h1 className="text-base md:text-xl font-mono text-green-400 tracking-widest">
+              <div className="space-y-1.5">
+                <h1 className="text-base font-mono text-green-400 tracking-widest">
                   {t('profile.identitySetup')}
                 </h1>
-                <div className="w-16 md:w-20 h-px bg-green-400 mx-auto"></div>
-                <p className="text-green-300/70 font-mono text-xs tracking-wide">
+                <div className="w-16 h-px bg-green-400 mx-auto"></div>
+                <p className="text-green-300/70 font-mono text-[11px] tracking-wide">
                   {t('profile.createDigitalProfile')}
                 </p>
               </div>
             </div>
             
-            {/* Wallet Status */}
-            <div className="p-3 md:p-6 border-b border-green-400/20">
-              <div className="bg-black/80 border border-green-400/30 p-2.5 md:p-4">
+            <div className="p-3 border-b border-green-400/20">
+              <div className="bg-black/80 border border-green-400/30 p-2.5">
                 <div className="flex items-center space-x-3">
-                  <Wallet className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
-                  <div className="flex-1">
-                    <p className="text-green-400 font-mono text-sm tracking-wide mb-1">{t('profile.walletSecured')}</p>
-                    <p className="text-green-300/60 text-xs font-mono break-all">
+                  <Wallet className="w-4 h-4 text-green-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-green-400 font-mono text-xs tracking-wide mb-0.5">{t('profile.walletSecured')}</p>
+                    <p className="text-green-300/60 text-[10px] font-mono truncate">
                       {walletData.address}
                     </p>
                   </div>
@@ -404,13 +393,12 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
             </div>
               
               <form onSubmit={handleSubmit} className="space-y-0">
-                {/* Avatar Section */}
-                <div className="p-3 md:p-6 text-center">
-                  <div className="space-y-3 md:space-y-4">
-                    <h3 className="text-sm font-mono text-green-400 tracking-wide">{t('profile.avatarSelection')}</h3>
+                <div className="p-3 text-center">
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-mono text-green-400 tracking-wide">{t('profile.avatarSelection')}</h3>
                     
-                    <div className="relative w-16 h-16 md:w-24 md:h-24 mx-auto">
-                      <Avatar className="w-16 h-16 md:w-24 md:h-24 border-2 border-green-400/50">
+                    <div className="relative w-16 h-16 mx-auto">
+                      <Avatar className="w-16 h-16 border-2 border-green-400/50">
                         {(profileData.avatarPreview || profileData.avatar) ? (
                           <AvatarImage 
                             src={profileData.avatarPreview || profileData.avatar} 
@@ -419,28 +407,28 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                           />
                         ) : (
                           <AvatarFallback className="bg-black text-green-400 text-xl">
-                            <User className="w-6 h-6 md:w-10 md:h-10" />
+                            <User className="w-6 h-6" />
                           </AvatarFallback>
                         )}
                       </Avatar>
                     </div>
                     
-                    <div className="flex justify-center gap-3">
+                    <div className="flex justify-center gap-2">
                       <ObjectUploader
                         maxNumberOfFiles={1}
                         maxFileSize={5242880}
                         onGetUploadParameters={handleGetUploadParameters}
                         onComplete={handleAvatarUploadComplete}
                         onFileSelect={handleAvatarUploadStart}
-                        buttonClassName="bg-black border-2 border-green-400/30 text-green-400 hover:bg-green-400/5 font-mono text-xs px-4 py-2 tracking-wide"
+                        buttonClassName="bg-black border-2 border-green-400/30 text-green-400 hover:bg-green-400/5 font-mono text-[11px] px-3 py-2 tracking-wide"
                       >
-                        <Upload className="w-3 h-3 mr-2" />
+                        <Upload className="w-3 h-3 mr-1.5" />
                         {isUploadingAvatar ? t('profile.uploading') : t('profile.upload')}
                       </ObjectUploader>
                       
                       <Button
                         type="button"
-                        className="bg-black border-2 border-green-400/30 text-green-400 hover:bg-green-400/5 font-mono text-xs px-4 py-2 tracking-wide"
+                        className="bg-black border-2 border-green-400/30 text-green-400 hover:bg-green-400/5 font-mono text-[11px] px-3 py-2 tracking-wide"
                         onClick={generateAvatar}
                         disabled={!profileData.username}
                       >
@@ -450,32 +438,31 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                   </div>
                 </div>
 
-                {/* Username Section */}
-                <div className="p-3 md:p-6 border-b border-green-400/20">
-                  <div className="space-y-3 md:space-y-4">
-                    <h3 className="text-sm font-mono text-green-400 tracking-wide text-center">{t('profile.usernameAssignment')}</h3>
+                <div className="p-3 border-b border-green-400/20">
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-mono text-green-400 tracking-wide text-center">{t('profile.usernameAssignment')}</h3>
                     
-                    <div className="space-y-3">
-                      <Label htmlFor="username" className="text-xs font-mono text-green-400 tracking-wide">{t('profile.identifier')}</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="username" className="text-[11px] font-mono text-green-400 tracking-wide">{t('profile.identifier')}</Label>
                       <Input
                         id="username"
                         value={profileData.username}
                         onChange={(e) => handleUsernameChange(e.target.value)}
                         placeholder={t('profile.enterUsername')}
-                        className="bg-black/90 border-2 border-green-400/30 text-green-300 placeholder:text-green-500/50 font-mono p-2 md:p-3 h-9 md:h-12 tracking-wide focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
+                        className="bg-black/90 border-2 border-green-400/30 text-green-300 placeholder:text-green-500/50 font-mono p-2 h-10 text-sm tracking-wide focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
                         maxLength={20}
                         required
                       />
                       {usernameError && (
-                        <p className="text-red-400 text-xs font-mono tracking-wide">
+                        <p className="text-red-400 text-[11px] font-mono tracking-wide">
                           ERROR: {usernameError}
                         </p>
                       )}
                       <div className="flex justify-between">
-                        <span className="text-green-300/50 text-xs font-mono">
+                        <span className="text-green-300/50 text-[10px] font-mono">
                           {profileData.username.length > 0 ? t('profile.valid') : t('profile.pending')}
                         </span>
-                        <span className="text-green-300/50 text-xs font-mono">
+                        <span className="text-green-300/50 text-[10px] font-mono">
                           {profileData.username.length}/20
                         </span>
                       </div>
@@ -483,27 +470,26 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                   </div>
                 </div>
 
-                {/* Bio Section */}
-                <div className="p-3 md:p-6">
-                  <div className="space-y-3 md:space-y-4">
-                    <h3 className="text-sm font-mono text-green-400 tracking-wide text-center">{t('profile.bioData')}</h3>
+                <div className="p-3">
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-mono text-green-400 tracking-wide text-center">{t('profile.bioData')}</h3>
                     
-                    <div className="space-y-3">
-                      <Label htmlFor="bio" className="text-xs font-mono text-green-400 tracking-wide">{t('profile.description')}</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio" className="text-[11px] font-mono text-green-400 tracking-wide">{t('profile.description')}</Label>
                       <Textarea
                         id="bio"
                         value={profileData.bio}
                         onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                         placeholder={t('profile.enterPersonalInfo')}
-                        className="bg-black/90 border-2 border-green-400/30 text-green-300 placeholder:text-green-500/50 font-mono p-2 md:p-3 h-16 md:h-20 text-sm resize-none focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
+                        className="bg-black/90 border-2 border-green-400/30 text-green-300 placeholder:text-green-500/50 font-mono p-2 h-16 text-sm resize-none focus:border-green-400 focus:ring-1 focus:ring-green-400/20"
                         rows={3}
                         maxLength={150}
                       />
                       <div className="flex justify-between">
-                        <span className="text-green-300/50 text-xs font-mono">
+                        <span className="text-green-300/50 text-[10px] font-mono">
                           {profileData.bio.length > 0 ? t('profile.dataEntered') : t('profile.optional')}
                         </span>
-                        <span className="text-green-300/50 text-xs font-mono">
+                        <span className="text-green-300/50 text-[10px] font-mono">
                           {profileData.bio.length}/150
                         </span>
                       </div>
@@ -511,11 +497,10 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                   </div>
                 </div>
 
-                {/* Submit Section */}
-                <div className="p-3 md:p-6 border-t border-green-400/20">
+                <div className="p-3 border-t border-green-400/20">
                   <Button
                     type="submit"
-                    className="w-full h-10 md:h-14 bg-black border-2 border-green-400 text-green-400 hover:bg-green-400/10 font-mono text-sm md:text-base tracking-wide disabled:border-green-600/30 disabled:text-green-600/50"
+                    className="w-full h-11 bg-black border-2 border-green-400 text-green-400 hover:bg-green-400/10 font-mono text-sm tracking-wide disabled:border-green-600/30 disabled:text-green-600/50"
                     disabled={createUserMutation.isPending || !profileData.username.trim()}
                   >
                     {createUserMutation.isPending ? t('profile.creatingProfile') : t('profile.initializeMatrix')}
@@ -523,12 +508,11 @@ export default function ProfileSetup({ walletData, onComplete }: ProfileSetupPro
                 </div>
               </form>
               
-            {/* Matrix Footer */}
-            <div className="text-center py-3 md:py-6 border-t border-green-400/20">
-              <div className="flex items-center justify-center space-x-4">
-                <div className="w-8 h-px bg-green-400/50"></div>
-                <span className="text-xs font-mono text-green-400/70 tracking-widest">{t('profile.identityProtocol')}</span>
-                <div className="w-8 h-px bg-green-400/50"></div>
+            <div className="text-center py-3 border-t border-green-400/20">
+              <div className="flex items-center justify-center space-x-3">
+                <div className="w-6 h-px bg-green-400/50"></div>
+                <span className="text-[10px] font-mono text-green-400/70 tracking-widest">{t('profile.identityProtocol')}</span>
+                <div className="w-6 h-px bg-green-400/50"></div>
               </div>
             </div>
           </div>

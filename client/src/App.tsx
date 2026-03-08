@@ -23,7 +23,10 @@ import TermsPage from "./pages/terms";
 import PrivacyPage from "./pages/privacy";
 import WhitepaperPage from "./pages/whitepaper";
 import SwapPage from "@/pages/swap";
+import DownloadPage from "@/pages/download";
+import HelpPage from "@/pages/help";
 import NotFound from "@/pages/not-found";
+import Onboarding, { useOnboarding } from "@/components/onboarding";
 
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -83,11 +86,17 @@ function LoadingScreen() {
 function Router() {
   const { isConnected, walletAddress, currentUser } = useWallet();
   const [location, setLocation] = useLocation();
+  const { showOnboarding, completeOnboarding } = useOnboarding();
 
   const isAuthed = isConnected && !!currentUser;
 
+  if (showOnboarding && location === "/" && !isAuthed) {
+    return <Onboarding onComplete={completeOnboarding} />;
+  }
+
   return (
     <Switch>
+      <Route path="/playstore" component={DownloadPage} />
       <Route path="/roadmap" component={RoadmapPage} />
       <Route path="/about" component={AboutPage} />
       <Route path="/terms" component={TermsPage} />
@@ -143,6 +152,13 @@ function Router() {
         )}
       </Route>
       <Route path="/swap" component={SwapPage} />
+      <Route path="/help">
+        {isAuthed ? (
+          <HelpPage />
+        ) : (
+          <AuthPage />
+        )}
+      </Route>
       <Route path="/nft-collection">
         {isAuthed ? (
           <NFTCollectionPage currentUser={currentUser} />
