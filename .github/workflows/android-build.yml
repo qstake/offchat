@@ -20,7 +20,7 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --ignore-scripts || npm install --legacy-peer-deps
 
     - name: Build web app
       run: npm run build
@@ -41,14 +41,15 @@ jobs:
 
     - name: Create Capacitor config
       run: |
-        cat > capacitor.config.ts << 'EOF'
+        cat > capacitor.config.ts << 'CAPEOF'
         import type { CapacitorConfig } from '@capacitor/cli';
         const config: CapacitorConfig = {
           appId: 'app.offchat.messenger',
           appName: 'Offchat',
           webDir: 'dist/public',
           server: {
-            androidScheme: 'https'
+            androidScheme: 'https',
+            hostname: 'offchat.app'
           },
           plugins: {
             BluetoothLe: {
@@ -62,7 +63,7 @@ jobs:
           }
         };
         export default config;
-        EOF
+        CAPEOF
 
     - name: Add Android platform
       run: npx cap add android
